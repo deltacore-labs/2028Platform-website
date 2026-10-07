@@ -1,0 +1,6 @@
+name = "rom2028-admin"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-01"
+
+# Environment variables are set as secrets in the Cloudflare Pages dashboard,
+# not here, so API keys don't end up in the repository.
