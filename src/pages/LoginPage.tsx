@@ -16,7 +16,7 @@ export function LoginPage() {
     setLoading(true)
     try {
       await signInWithEmailAndPassword(auth, email, password)
-      navigate('/')
+      navigate('/admin')
     } catch {
       setError('Login fehlgeschlagen. Bitte E-Mail und Passwort prüfen.')
     } finally {

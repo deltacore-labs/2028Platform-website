@@ -4,10 +4,10 @@ import { auth } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
 
 const navItems = [
-  { to: '/emergency', label: '🚨 Notfall', roles: ['miniteam'] },
-  { to: '/announcements', label: '📢 Ankündigungen', roles: ['miniteam', 'leader'] },
-  { to: '/users', label: '👥 Nutzer', roles: ['miniteam'] },
-  { to: '/groups', label: '🏕️ Gruppen', roles: ['miniteam'] },
+  { to: '/admin/emergency', label: '🚨 Notfall', roles: ['miniteam'] },
+  { to: '/admin/announcements', label: '📢 Ankündigungen', roles: ['miniteam', 'leader'] },
+  { to: '/admin/users', label: '👥 Nutzer', roles: ['miniteam'] },
+  { to: '/admin/groups', label: '🏕️ Gruppen', roles: ['miniteam'] },
 ] as const
 
 export function Layout() {

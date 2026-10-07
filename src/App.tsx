@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
+import { LandingPage } from './pages/LandingPage'
 import { EmergencyPage } from './pages/EmergencyPage'
 import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { UsersPage } from './pages/UsersPage'
@@ -17,16 +18,17 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route
-              path="/"
+              path="/admin"
               element={
                 <ProtectedRoute requiredRole="leader">
                   <Layout />
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/emergency" replace />} />
+              <Route index element={<Navigate to="/admin/emergency" replace />} />
               <Route
                 path="emergency"
                 element={
