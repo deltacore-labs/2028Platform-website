@@ -19,16 +19,16 @@ export function Layout() {
   )
 
   return (
-    <div className="flex min-h-screen bg-stone-950">
-      <aside className="w-56 bg-green-950 border-r border-green-900/40 flex flex-col">
-        <div className="p-5 border-b border-green-900/40">
+    <div className="flex min-h-screen bg-gray-50">
+      <aside className="w-56 bg-red-800 border-r border-red-700/40 flex flex-col">
+        <div className="p-5 border-b border-red-700/40">
           <div className="flex items-center gap-2 mb-0.5">
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 flex items-center justify-center text-green-950 font-bold text-xs">
+            <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-red-800 font-bold text-xs">
               ✞
             </div>
             <h1 className="text-white font-bold text-base">Rom 2028</h1>
           </div>
-          <p className="text-green-400/60 text-xs mt-0.5 pl-8">Admin Dashboard</p>
+          <p className="text-red-200/60 text-xs mt-0.5 pl-8">Admin Dashboard</p>
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
@@ -39,8 +39,8 @@ export function Layout() {
               className={({ isActive }) =>
                 `block px-3 py-2 rounded-lg text-sm transition-colors ${
                   isActive
-                    ? 'bg-green-700 text-white'
-                    : 'text-green-300/70 hover:bg-green-900/60 hover:text-white'
+                    ? 'bg-red-600 text-white'
+                    : 'text-red-100/70 hover:bg-red-700/60 hover:text-white'
                 }`
               }
             >
@@ -49,11 +49,11 @@ export function Layout() {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-green-900/40">
-          <p className="text-green-300/50 text-xs px-3 mb-2 truncate">{appUser?.name ?? ''}</p>
+        <div className="p-3 border-t border-red-700/40">
+          <p className="text-red-200/50 text-xs px-3 mb-2 truncate">{appUser?.name ?? ''}</p>
           <button
             onClick={() => signOut(auth)}
-            className="w-full text-left px-3 py-2 rounded-lg text-sm text-green-300/70 hover:bg-green-900/60 hover:text-white transition-colors"
+            className="w-full text-left px-3 py-2 rounded-lg text-sm text-red-100/70 hover:bg-red-700/60 hover:text-white transition-colors"
           >
             Abmelden
           </button>
