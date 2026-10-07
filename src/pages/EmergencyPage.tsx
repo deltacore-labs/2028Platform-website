@@ -31,34 +31,34 @@ export function EmergencyPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-white">Notfalldashboard</h2>
-        <span className="text-slate-500 text-sm">Aktualisiert automatisch alle 15 s</span>
+        <span className="text-stone-500 text-sm">Aktualisiert automatisch alle 15 s</span>
       </div>
 
-      {isLoading && <p className="text-slate-400">Lade…</p>}
+      {isLoading && <p className="text-stone-400">Lade…</p>}
 
       {active.length === 0 && !isLoading && (
-        <div className="bg-green-950 rounded-xl p-6 text-green-400 text-center mb-6">
+        <div className="bg-green-950/60 border border-green-900/40 rounded-xl p-6 text-green-400 text-center mb-6">
           ✓ Keine offenen Notfälle
         </div>
       )}
 
       {active.length > 0 && (
         <section className="mb-8">
-          <h3 className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-3">
+          <h3 className="text-stone-400 text-sm font-medium uppercase tracking-wider mb-3">
             Aktiv ({active.length})
           </h3>
           <div className="space-y-3">
             {active.map(r => (
-              <div key={r.id} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+              <div key={r.id} className="bg-stone-900 rounded-xl p-4 border border-stone-800">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-white font-semibold">{typeLabel[r.type] ?? r.type}</span>
                       <StatusBadge status={r.status} />
                     </div>
-                    <p className="text-slate-300 text-sm">{r.reporterName}</p>
+                    <p className="text-stone-300 text-sm">{r.reporterName}</p>
                     {r.reporterPhone && (
-                      <a href={`tel:${r.reporterPhone}`} className="text-blue-400 text-sm hover:underline">
+                      <a href={`tel:${r.reporterPhone}`} className="text-amber-400 text-sm hover:underline">
                         {r.reporterPhone}
                       </a>
                     )}
@@ -67,12 +67,12 @@ export function EmergencyPage() {
                         href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="block text-blue-400 text-xs mt-1 hover:underline"
+                        className="block text-amber-400 text-xs mt-1 hover:underline"
                       >
                         Standort anzeigen ↗
                       </a>
                     )}
-                    <p className="text-slate-500 text-xs mt-1">
+                    <p className="text-stone-500 text-xs mt-1">
                       {new Date(r.createdAt).toLocaleString('de-DE')}
                     </p>
                   </div>
@@ -80,7 +80,7 @@ export function EmergencyPage() {
                     {r.status === 'open' && (
                       <button
                         onClick={() => mutation.mutate({ id: r.id, status: 'in_progress' })}
-                        className="bg-yellow-700 hover:bg-yellow-600 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
+                        className="bg-amber-700 hover:bg-amber-600 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
                       >
                         Übernehmen
                       </button>
@@ -103,13 +103,13 @@ export function EmergencyPage() {
 
       {resolved.length > 0 && (
         <section>
-          <h3 className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-3">
+          <h3 className="text-stone-400 text-sm font-medium uppercase tracking-wider mb-3">
             Erledigt ({resolved.length})
           </h3>
           <div className="space-y-2 opacity-50">
             {resolved.map(r => (
-              <div key={r.id} className="bg-slate-900 rounded-xl p-3 flex items-center justify-between">
-                <span className="text-slate-400 text-sm">{typeLabel[r.type]} — {r.reporterName}</span>
+              <div key={r.id} className="bg-stone-950 rounded-xl p-3 flex items-center justify-between border border-stone-900">
+                <span className="text-stone-400 text-sm">{typeLabel[r.type]} — {r.reporterName}</span>
                 <StatusBadge status={r.status} />
               </div>
             ))}

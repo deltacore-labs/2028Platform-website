@@ -19,11 +19,16 @@ export function Layout() {
   )
 
   return (
-    <div className="flex min-h-screen bg-slate-950">
-      <aside className="w-56 bg-slate-900 border-r border-slate-800 flex flex-col">
-        <div className="p-5 border-b border-slate-800">
-          <h1 className="text-white font-bold text-lg">Rom 2028</h1>
-          <p className="text-slate-500 text-xs mt-0.5">Admin Dashboard</p>
+    <div className="flex min-h-screen bg-stone-950">
+      <aside className="w-56 bg-green-950 border-r border-green-900/40 flex flex-col">
+        <div className="p-5 border-b border-green-900/40">
+          <div className="flex items-center gap-2 mb-0.5">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 flex items-center justify-center text-green-950 font-bold text-xs">
+              ✞
+            </div>
+            <h1 className="text-white font-bold text-base">Rom 2028</h1>
+          </div>
+          <p className="text-green-400/60 text-xs mt-0.5 pl-8">Admin Dashboard</p>
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
@@ -34,8 +39,8 @@ export function Layout() {
               className={({ isActive }) =>
                 `block px-3 py-2 rounded-lg text-sm transition-colors ${
                   isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    ? 'bg-green-700 text-white'
+                    : 'text-green-300/70 hover:bg-green-900/60 hover:text-white'
                 }`
               }
             >
@@ -44,11 +49,11 @@ export function Layout() {
           ))}
         </nav>
 
-        <div className="p-3 border-t border-slate-800">
-          <p className="text-slate-500 text-xs px-3 mb-2 truncate">{appUser?.name ?? ''}</p>
+        <div className="p-3 border-t border-green-900/40">
+          <p className="text-green-300/50 text-xs px-3 mb-2 truncate">{appUser?.name ?? ''}</p>
           <button
             onClick={() => signOut(auth)}
-            className="w-full text-left px-3 py-2 rounded-lg text-sm text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="w-full text-left px-3 py-2 rounded-lg text-sm text-green-300/70 hover:bg-green-900/60 hover:text-white transition-colors"
           >
             Abmelden
           </button>
