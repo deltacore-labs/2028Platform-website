@@ -67,7 +67,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
       {/* Navbar */}
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-red-100">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-red-700 flex items-center justify-center text-white font-bold text-sm">
@@ -138,7 +138,7 @@ export function LandingPage() {
       </section>
 
       {/* Stats strip */}
-      <section className="border-y border-gray-200 bg-gray-50">
+      <section className="border-y border-red-100 bg-red-50">
         <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           {[
             { val: '8', label: 'Tage in Rom' },
@@ -188,7 +188,7 @@ export function LandingPage() {
             ].map(({ icon, label, val }) => (
               <div
                 key={label}
-                className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+                className="bg-white border border-red-100 rounded-xl p-4 shadow-sm"
               >
                 <div className="text-2xl mb-2">{icon}</div>
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">{label}</div>
@@ -200,7 +200,7 @@ export function LandingPage() {
       </section>
 
       {/* Highlights */}
-      <section id="programm" className="bg-gray-50 border-y border-gray-200 py-20">
+      <section id="programm" className="bg-red-50 border-y border-red-100 py-20">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-3">Was uns erwartet</h2>
@@ -212,7 +212,7 @@ export function LandingPage() {
             {highlights.map(({ icon, title, desc }) => (
               <div
                 key={title}
-                className="bg-white border border-gray-200 hover:border-red-300 rounded-2xl p-6 transition-colors shadow-sm"
+                className="bg-white border border-red-100 hover:border-red-300 rounded-2xl p-6 transition-colors shadow-sm"
               >
                 <div className="text-3xl mb-4">{icon}</div>
                 <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
@@ -247,7 +247,7 @@ export function LandingPage() {
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="bg-gray-50 border-y border-gray-200 py-20">
+      <section id="faq" className="bg-white border-y border-red-100 py-20">
         <div className="max-w-3xl mx-auto px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-3">Häufige Fragen</h2>
@@ -257,11 +257,11 @@ export function LandingPage() {
             {faqs.map((faq, i) => (
               <div
                 key={i}
-                className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm"
+                className="bg-white border border-red-100 rounded-xl overflow-hidden shadow-sm"
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+                  className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-red-50 transition-colors"
                 >
                   <span className="font-semibold text-gray-900">{faq.q}</span>
                   <span
@@ -271,7 +271,7 @@ export function LandingPage() {
                   </span>
                 </button>
                 {openFaq === i && (
-                  <div className="px-6 pb-5 text-gray-600 text-sm leading-relaxed border-t border-gray-200 pt-4">
+                  <div className="px-6 pb-5 text-gray-600 text-sm leading-relaxed border-t border-red-100 pt-4">
                     {faq.a}
                   </div>
                 )}
@@ -308,16 +308,16 @@ export function LandingPage() {
               ))}
             </ul>
           </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center shadow-sm">
+          <div className="bg-white border border-red-100 rounded-2xl p-8 text-center shadow-sm">
             <div className="text-6xl mb-4">📱</div>
             <p className="text-gray-500 text-sm mb-4">
               Die App ist kurz vor der Wallfahrt im App Store und Google Play verfügbar.
             </p>
             <div className="flex gap-3 justify-center">
-              <div className="bg-gray-100 border border-gray-200 rounded-xl px-5 py-2.5 text-sm text-gray-500">
+              <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-2.5 text-sm text-red-700">
                 App Store
               </div>
-              <div className="bg-gray-100 border border-gray-200 rounded-xl px-5 py-2.5 text-sm text-gray-500">
+              <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-2.5 text-sm text-red-700">
                 Google Play
               </div>
             </div>
@@ -326,7 +326,7 @@ export function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-200 bg-gray-50">
+      <footer className="border-t border-red-100 bg-white">
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
@@ -356,7 +356,7 @@ export function LandingPage() {
               </div>
             </div>
           </div>
-          <div className="border-t border-gray-200 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+          <div className="border-t border-red-100 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400">
             <span>© 2025 BDKJ & BJA im Bistum Mainz. Alle Rechte vorbehalten.</span>
             <Link to="/login" className="hover:text-gray-600 transition-colors">
               Teambereich

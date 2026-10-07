@@ -49,7 +49,7 @@ export function EmergencyPage() {
           </h3>
           <div className="space-y-3">
             {active.map(r => (
-              <div key={r.id} className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <div key={r.id} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -108,7 +108,7 @@ export function EmergencyPage() {
           </h3>
           <div className="space-y-2 opacity-50">
             {resolved.map(r => (
-              <div key={r.id} className="bg-gray-50 rounded-xl p-3 flex items-center justify-between border border-gray-200">
+              <div key={r.id} className="bg-red-50 rounded-xl p-3 flex items-center justify-between border border-red-100">
                 <span className="text-gray-500 text-sm">{typeLabel[r.type]} — {r.reporterName}</span>
                 <StatusBadge status={r.status} />
               </div>

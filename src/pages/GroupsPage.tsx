@@ -24,10 +24,10 @@ export function GroupsPage() {
 
       <div className="space-y-3">
         {groups.map(g => (
-          <div key={g.id} className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div key={g.id} className="bg-white rounded-xl border border-red-100 shadow-sm">
             <button
               onClick={() => setExpandedGroupId(prev => prev === g.id ? null : g.id)}
-              className="w-full text-left p-4 flex items-center justify-between hover:bg-gray-50 rounded-xl transition-colors"
+              className="w-full text-left p-4 flex items-center justify-between hover:bg-red-50 rounded-xl transition-colors"
             >
               <div>
                 <span className="text-gray-900 font-medium">{g.name}</span>
@@ -50,7 +50,7 @@ export function GroupsPage() {
             </button>
 
             {expandedGroupId === g.id && (
-              <div className="border-t border-gray-200 px-4 py-3">
+              <div className="border-t border-red-100 px-4 py-3">
                 {members.length === 0 ? (
                   <p className="text-gray-400 text-sm">Keine Mitglieder</p>
                 ) : (

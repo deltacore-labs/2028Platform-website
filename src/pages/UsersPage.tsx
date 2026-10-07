@@ -10,7 +10,7 @@ const roleLabel: Record<UserRole, string> = {
 }
 
 const roleBadge: Record<UserRole, string> = {
-  participant: 'bg-gray-100 text-gray-600',
+  participant: 'bg-red-50 text-red-600',
   leader: 'bg-green-100 text-green-700',
   miniteam: 'bg-red-100 text-red-700',
 }
@@ -56,7 +56,7 @@ export function UsersPage() {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-gray-500 text-left border-b border-gray-200">
+            <tr className="text-gray-500 text-left border-b border-red-100">
               <th className="pb-3 pr-4 font-medium">Name</th>
               <th className="pb-3 pr-4 font-medium">Rolle</th>
               <th className="pb-3 pr-4 font-medium">Gruppe</th>
@@ -65,7 +65,7 @@ export function UsersPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {users.map(u => (
-              <tr key={u.uid} className="hover:bg-gray-50">
+              <tr key={u.uid} className="hover:bg-red-50">
                 <td className="py-3 pr-4">
                   <p className="text-gray-900">{u.name}</p>
                   {u.phone && <p className="text-gray-400 text-xs">{u.phone}</p>}

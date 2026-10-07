@@ -61,7 +61,7 @@ export function AnnouncementsPage() {
       </div>
 
       {showForm && (
-        <div className="bg-white rounded-xl p-5 mb-6 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-xl p-5 mb-6 border border-red-100 shadow-sm">
           <h3 className="text-gray-900 font-semibold mb-4">Neue Ankündigung</h3>
           <div className="space-y-4">
             <div>
@@ -127,7 +127,7 @@ export function AnnouncementsPage() {
 
       <div className="space-y-3">
         {announcements.map(a => (
-          <div key={a.id} className={`bg-white rounded-xl p-4 border border-gray-200 shadow-sm ${priorityStyle[a.priority]}`}>
+          <div key={a.id} className={`bg-white rounded-xl p-4 border border-red-100 shadow-sm ${priorityStyle[a.priority]}`}>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                 {priorityLabel[a.priority]}

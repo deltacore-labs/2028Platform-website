@@ -19,7 +19,7 @@ export function Layout() {
   )
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-white">
       <aside className="w-56 bg-red-800 border-r border-red-700/40 flex flex-col">
         <div className="p-5 border-b border-red-700/40">
           <div className="flex items-center gap-2 mb-0.5">
