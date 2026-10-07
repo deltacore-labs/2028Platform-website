@@ -12,6 +12,7 @@ export interface AppUser {
   groupId: string | null
   phone: string | null
   fcmToken: string | null
+  mustChangePassword: number
   createdAt: string
   updatedAt: string
 }
