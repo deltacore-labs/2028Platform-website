@@ -8,12 +8,14 @@ const roleLabel: Record<UserRole, string> = {
   participant: 'Teilnehmer',
   leader: 'Leiter',
   miniteam: 'Miniteam',
+  admin: 'Admin',
 }
 
 const roleBadge: Record<UserRole, string> = {
   participant: 'bg-red-50 text-red-600',
   leader: 'bg-green-100 text-green-700',
   miniteam: 'bg-red-100 text-red-700',
+  admin: 'bg-purple-100 text-purple-700',
 }
 
 export function UsersPage() {
