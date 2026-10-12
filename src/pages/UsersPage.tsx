@@ -1,27 +1,39 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchAllUsers, updateUserRole, updateUserGroup, createUser } from '../api/users'
+import { fetchAllUsers, updateUserRole, updateUserGroup, updateUserDiocese, createUser } from '../api/users'
 import { fetchGroups } from '../api/groups'
+import { fetchDioceses } from '../api/dioceses'
+import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../types'
 
 const roleLabel: Record<UserRole, string> = {
   participant: 'Teilnehmer',
   leader: 'Leiter',
   miniteam: 'Miniteam',
+  admin: 'Admin',
 }
 
 const roleBadge: Record<UserRole, string> = {
-  participant: 'bg-red-50 text-red-600',
-  leader: 'bg-green-100 text-green-700',
-  miniteam: 'bg-red-100 text-red-700',
+  participant: 'bg-surface-strong text-ink-warm',
+  leader: 'bg-[#f0faf4] text-[#16a34a]',
+  miniteam: 'bg-[#f5f0fa] text-[#7c3aed]',
+  admin: 'bg-canvas-deep text-white',
 }
 
 export function UsersPage() {
   const queryClient = useQueryClient()
+  const { appUser } = useAuth()
+  const isAdmin = appUser?.role === 'admin'
+
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newRole, setNewRole] = useState<UserRole>('leader')
   const [createResult, setCreateResult] = useState<{ name: string; tempPassword: string } | null>(null)
+
+  const [search, setSearch] = useState('')
+  const [filterRole, setFilterRole] = useState<UserRole | ''>('')
+  const [filterDiocese, setFilterDiocese] = useState('')
+  const [filterGroup, setFilterGroup] = useState('')
 
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
@@ -31,6 +43,12 @@ export function UsersPage() {
   const { data: groups = [] } = useQuery({
     queryKey: ['groups'],
     queryFn: fetchGroups,
+  })
+
+  const { data: dioceses = [] } = useQuery({
+    queryKey: ['dioceses'],
+    queryFn: fetchDioceses,
+    enabled: isAdmin,
   })
 
   const roleMutation = useMutation({
@@ -44,8 +62,15 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
+  const dioceseMutation = useMutation({
+    mutationFn: ({ uid, dioceseId }: { uid: string; dioceseId: string | null }) =>
+      updateUserDiocese(uid, dioceseId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  })
+
   const createMutation = useMutation({
-    mutationFn: ({ name, email, role }: { name: string; email: string; role: UserRole }) => createUser(name, email, role),
+    mutationFn: ({ name, email, role }: { name: string; email: string; role: UserRole }) =>
+      createUser(name, email, role),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setCreateResult({ name: newName, tempPassword: data.temp_password })
@@ -56,104 +81,211 @@ export function UsersPage() {
   })
 
   const groupName = (id: string | null) => groups.find(g => g.id === id)?.name ?? '—'
+  const dioceseName = (id: string | null) => {
+    if (!id) return '—'
+    return dioceses.find(d => d.id === id)?.name ?? id
+  }
+
+  const filtered = users.filter(u => {
+    if (search && !u.name.toLowerCase().includes(search.toLowerCase())) return false
+    if (filterRole && u.role !== filterRole) return false
+    if (filterDiocese && u.dioceseId !== filterDiocese) return false
+    if (filterGroup && u.groupId !== filterGroup) return false
+    return true
+  })
+
+  const hasActiveFilter = search || filterRole || filterDiocese || filterGroup
+
+  const inputClass = "bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Nutzerverwaltung</h2>
+    <div className="p-8 max-w-5xl">
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="font-display text-[32px] text-ink" style={{ fontWeight: 300, letterSpacing: '-0.32px' }}>
+          Nutzerverwaltung
+        </h2>
+        <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
+          {hasActiveFilter ? `${filtered.length} von ${users.length} Nutzern` : `${users.length} Nutzer`}
+        </p>
+      </div>
 
-      <div className="bg-white border border-red-100 rounded-xl p-5 mb-6 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Neues Konto anlegen</h3>
-        <p className="text-xs text-gray-400 mb-4">Das Konto erhält ein temporäres Passwort, das beim ersten Login geändert werden muss.</p>
+      {/* Create user card */}
+      <div className="bg-surface border border-hairline rounded-xl p-6 mb-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+        <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted mb-1">
+          Neues Konto
+        </p>
+        <p className="text-muted text-[13px] mb-4">
+          Das Konto erhält ein temporäres Passwort, das beim ersten Login geändert werden muss.
+        </p>
 
         {createResult && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 text-sm">
-            <p className="font-semibold text-green-800 mb-1">Konto für {createResult.name} erstellt</p>
-            <p className="text-green-700 text-xs">Temporäres Passwort: <span className="font-mono font-bold">{createResult.tempPassword}</span></p>
-            <button onClick={() => setCreateResult(null)} className="mt-2 text-xs text-green-600 hover:underline">Schließen</button>
+          <div className="bg-[#f0faf4] border border-[#bbf7d0] rounded-xl p-4 mb-4">
+            <p className="font-medium text-[#16a34a] text-[14px] mb-1">
+              Konto für {createResult.name} erstellt
+            </p>
+            <p className="text-[#16a34a] text-[13px]">
+              Temporäres Passwort:{' '}
+              <span className="font-mono font-bold">{createResult.tempPassword}</span>
+            </p>
+            <button
+              onClick={() => setCreateResult(null)}
+              className="mt-2 text-[13px] text-[#16a34a] hover:underline underline-offset-2"
+            >
+              Schließen
+            </button>
           </div>
         )}
 
         {createMutation.error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-700 text-xs font-mono">
+          <div className="bg-red-50 border border-red-100 rounded-lg p-3 mb-4 text-[#dc2626] text-[13px] font-mono">
             {(createMutation.error as Error).message}
           </div>
         )}
 
-        <div className="flex gap-3 flex-wrap">
-          <input
-            type="text"
-            placeholder="Vor- und Nachname"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            className="flex-1 min-w-[160px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
-          />
-          <input
-            type="email"
-            placeholder="E-Mail-Adresse"
-            value={newEmail}
-            onChange={e => setNewEmail(e.target.value)}
-            className="flex-1 min-w-[160px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
-          />
-          <select
-            value={newRole}
-            onChange={e => setNewRole(e.target.value as UserRole)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-red-600"
-          >
-            <option value="leader">Leiter</option>
-            <option value="participant">Teilnehmer</option>
-            <option value="miniteam">Miniteam</option>
-          </select>
+        <div className="flex gap-3 flex-wrap items-end">
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-[12px] font-medium text-muted mb-1.5 tracking-[0.4px] uppercase">Name</label>
+            <input
+              type="text"
+              placeholder="Vor- und Nachname"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-[12px] font-medium text-muted mb-1.5 tracking-[0.4px] uppercase">E-Mail</label>
+            <input
+              type="email"
+              placeholder="name@bistum.de"
+              value={newEmail}
+              onChange={e => setNewEmail(e.target.value)}
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <div>
+            <label className="block text-[12px] font-medium text-muted mb-1.5 tracking-[0.4px] uppercase">Rolle</label>
+            <select
+              value={newRole}
+              onChange={e => setNewRole(e.target.value as UserRole)}
+              className={`bg-surface ${inputClass}`}
+            >
+              <option value="leader">Leiter</option>
+              <option value="participant">Teilnehmer</option>
+              <option value="miniteam">Miniteam</option>
+            </select>
+          </div>
           <button
             onClick={() => createMutation.mutate({ name: newName.trim(), email: newEmail.trim(), role: newRole })}
             disabled={newName.trim().length < 2 || !newEmail.includes('@') || createMutation.isPending}
-            className="bg-red-600 text-white text-sm px-4 py-2 rounded-lg font-medium disabled:opacity-50 hover:bg-red-700 transition-colors"
+            className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors"
           >
             {createMutation.isPending ? 'Anlegen…' : 'Anlegen'}
           </button>
         </div>
       </div>
 
-      {isLoading && <p className="text-gray-500">Lade…</p>}
+      {/* Filter bar */}
+      <div className="flex gap-3 flex-wrap mb-4">
+        <input
+          type="text"
+          placeholder="Name suchen…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className={`flex-1 min-w-[160px] ${inputClass}`}
+        />
+        <select
+          value={filterRole}
+          onChange={e => setFilterRole(e.target.value as UserRole | '')}
+          className={`bg-surface ${inputClass}`}
+        >
+          <option value="">Alle Rollen</option>
+          <option value="participant">Teilnehmer</option>
+          <option value="leader">Leiter</option>
+          <option value="miniteam">Miniteam</option>
+          <option value="admin">Admin</option>
+        </select>
+        {isAdmin && dioceses.length > 0 && (
+          <select
+            value={filterDiocese}
+            onChange={e => setFilterDiocese(e.target.value)}
+            className={`bg-surface ${inputClass}`}
+          >
+            <option value="">Alle Bistümer</option>
+            {dioceses.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        )}
+        <select
+          value={filterGroup}
+          onChange={e => setFilterGroup(e.target.value)}
+          className={`bg-surface ${inputClass}`}
+        >
+          <option value="">Alle Gruppen</option>
+          {groups.map(g => (
+            <option key={g.id} value={g.id}>{g.name}</option>
+          ))}
+        </select>
+        {hasActiveFilter && (
+          <button
+            onClick={() => { setSearch(''); setFilterRole(''); setFilterDiocese(''); setFilterGroup('') }}
+            className="text-[13px] text-muted hover:text-ink transition-colors px-3 py-2.5 rounded-lg border border-hairline-strong hover:bg-canvas"
+          >
+            Zurücksetzen
+          </button>
+        )}
+      </div>
+
+      {isLoading && <p className="text-muted text-[15px]">Lade…</p>}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-red-700 text-sm font-mono">
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-4 text-[#dc2626] text-[13px] font-mono">
           Fehler: {(error as Error).message}
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      {/* Table */}
+      <div className="bg-surface border border-hairline rounded-xl overflow-hidden">
+        <table className="w-full text-[14px]">
           <thead>
-            <tr className="text-gray-500 text-left border-b border-red-100">
-              <th className="pb-3 pr-4 font-medium">Name</th>
-              <th className="pb-3 pr-4 font-medium">Rolle</th>
-              <th className="pb-3 pr-4 font-medium">Gruppe</th>
-              <th className="pb-3 font-medium">Aktionen</th>
+            <tr className="border-b border-hairline">
+              <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Name</th>
+              <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Rolle</th>
+              <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Gruppe</th>
+              {isAdmin && (
+                <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Bistum</th>
+              )}
+              <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Aktionen</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {users.map(u => (
-              <tr key={u.uid} className="hover:bg-red-50">
-                <td className="py-3 pr-4">
-                  <p className="text-gray-900">{u.name}</p>
-                  {u.phone && <p className="text-gray-400 text-xs">{u.phone}</p>}
+          <tbody className="divide-y divide-hairline">
+            {filtered.map(u => (
+              <tr key={u.uid} className="hover:bg-canvas-soft transition-colors">
+                <td className="px-5 py-3.5">
+                  <p className="text-ink font-medium">{u.name}</p>
+                  {u.phone && <p className="text-muted text-[12px] mt-0.5">{u.phone}</p>}
                 </td>
-                <td className="py-3 pr-4">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadge[u.role]}`}>
+                <td className="px-5 py-3.5">
+                  <span className={`px-2.5 py-0.5 rounded-pill text-[11px] font-semibold tracking-[0.6px] uppercase ${roleBadge[u.role]}`}>
                     {roleLabel[u.role]}
                   </span>
                 </td>
-                <td className="py-3 pr-4 text-gray-500">
+                <td className="px-5 py-3.5 text-body">
                   {groupName(u.groupId)}
                 </td>
-                <td className="py-3">
-                  <div className="flex gap-2">
+                {isAdmin && (
+                  <td className="px-5 py-3.5 text-body">
+                    {dioceseName(u.dioceseId)}
+                  </td>
+                )}
+                <td className="px-5 py-3.5">
+                  <div className="flex gap-2 flex-wrap">
                     <select
                       value={u.role}
-                      onChange={e =>
-                        roleMutation.mutate({ uid: u.uid, role: e.target.value as UserRole })
-                      }
-                      className="bg-white text-gray-700 text-xs rounded px-2 py-1 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-red-600"
+                      onChange={e => roleMutation.mutate({ uid: u.uid, role: e.target.value as UserRole })}
+                      className="bg-surface text-body text-[13px] rounded-lg px-2.5 py-1.5 border border-hairline-strong focus:outline-none focus:border-ink transition-colors"
                     >
                       <option value="participant">Teilnehmer</option>
                       <option value="leader">Leiter</option>
@@ -161,20 +293,37 @@ export function UsersPage() {
                     </select>
                     <select
                       value={u.groupId ?? ''}
-                      onChange={e =>
-                        groupMutation.mutate({ uid: u.uid, groupId: e.target.value || null })
-                      }
-                      className="bg-white text-gray-700 text-xs rounded px-2 py-1 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-red-600"
+                      onChange={e => groupMutation.mutate({ uid: u.uid, groupId: e.target.value || null })}
+                      className="bg-surface text-body text-[13px] rounded-lg px-2.5 py-1.5 border border-hairline-strong focus:outline-none focus:border-ink transition-colors"
                     >
                       <option value="">Keine Gruppe</option>
                       {groups.map(g => (
                         <option key={g.id} value={g.id}>{g.name}</option>
                       ))}
                     </select>
+                    {isAdmin && dioceses.length > 0 && (
+                      <select
+                        value={u.dioceseId ?? ''}
+                        onChange={e => dioceseMutation.mutate({ uid: u.uid, dioceseId: e.target.value || null })}
+                        className="bg-surface text-body text-[13px] rounded-lg px-2.5 py-1.5 border border-hairline-strong focus:outline-none focus:border-ink transition-colors"
+                      >
+                        <option value="">Kein Bistum</option>
+                        {dioceses.map(d => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && !isLoading && (
+              <tr>
+                <td colSpan={isAdmin ? 5 : 4} className="px-5 py-6 text-muted text-[14px] text-center">
+                  Keine Nutzer gefunden.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

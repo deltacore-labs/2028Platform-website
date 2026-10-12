@@ -1,4 +1,4 @@
-export type UserRole = 'participant' | 'leader' | 'miniteam'
+export type UserRole = 'participant' | 'leader' | 'miniteam' | 'admin'
 export type AnnouncementPriority = 'info' | 'important' | 'critical'
 export type LocationType = 'venue' | 'water' | 'medical' | 'shade' | 'transport' | 'spiritual'
 export type EmergencyType = 'emergency' | 'lost' | 'unwell'
@@ -11,6 +11,7 @@ export interface AppUser {
   role: UserRole
   groupId: string | null
   phone: string | null
+  dioceseId: string | null
   fcmToken: string | null
   mustChangePassword: number
   createdAt: string
@@ -60,12 +61,24 @@ export interface EmergencyReport {
 export interface AppEvent {
   id: string
   title: string
-  description: string | null
-  startDate: string
-  endDate: string | null
+  description: string
+  startDate: number
+  endDate: number
   locationId: string | null
-  targetRoles: UserRole[]
+  targetRoles: string  // JSON string from DB — parse before use
   groupId: string | null
   createdBy: string
-  createdAt: string
+  createdAt: number
+}
+
+export interface JoinRequest {
+  id: string
+  requester_uid: string
+  requester_name: string
+  created_at: number
+}
+
+export interface Diocese {
+  id: string
+  name: string
 }

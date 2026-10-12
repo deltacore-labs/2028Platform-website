@@ -9,6 +9,8 @@ import { EmergencyPage } from './pages/EmergencyPage'
 import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { UsersPage } from './pages/UsersPage'
 import { GroupsPage } from './pages/GroupsPage'
+import { EventsPage } from './pages/EventsPage'
+import { DiocesesPage } from './pages/DiocesesPage'
 
 const queryClient = new QueryClient()
 
@@ -38,6 +40,7 @@ export default function App() {
                 }
               />
               <Route path="announcements" element={<AnnouncementsPage />} />
+              <Route path="events" element={<EventsPage />} />
               <Route
                 path="users"
                 element={
@@ -51,6 +54,14 @@ export default function App() {
                 element={
                   <ProtectedRoute requiredRole="miniteam">
                     <GroupsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="dioceses"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <DiocesesPage />
                   </ProtectedRoute>
                 }
               />

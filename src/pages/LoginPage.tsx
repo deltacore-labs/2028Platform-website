@@ -25,52 +25,82 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-red-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-xl border border-red-100">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-red-700 flex items-center justify-center text-white font-bold text-lg shrink-0">
-            ✞
+    <div className="min-h-screen bg-canvas flex items-center justify-center px-4">
+      {/* Atmospheric gradient orbs */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div
+          className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-40"
+          style={{ background: 'radial-gradient(circle, #a7e5d3 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute -bottom-24 -right-24 w-80 h-80 rounded-full opacity-30"
+          style={{ background: 'radial-gradient(circle, #c8b8e0 0%, transparent 70%)' }}
+        />
+        <div
+          className="absolute top-1/3 right-1/4 w-64 h-64 rounded-full opacity-25"
+          style={{ background: 'radial-gradient(circle, #f4c5a8 0%, transparent 70%)' }}
+        />
+      </div>
+
+      <div className="relative w-full max-w-sm">
+        {/* Logo mark */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-ink-warm text-white mb-4">
+            <span className="text-base">✞</span>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 leading-tight">Rom 2028 Admin</h1>
-            <p className="text-gray-500 text-xs mt-0.5">Nur für Miniteam & Leiter</p>
-          </div>
+          <h1 className="font-display text-[32px] leading-tight text-ink" style={{ fontWeight: 300, letterSpacing: '-0.32px' }}>
+            Rom 2028
+          </h1>
+          <p className="text-muted text-[13px] mt-1 tracking-[0.6px] uppercase font-medium">
+            Teambereich
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-700 mb-1">E-Mail</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className="w-full bg-white text-gray-900 rounded-lg px-4 py-2.5 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-700 mb-1">Passwort</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className="w-full bg-white text-gray-900 rounded-lg px-4 py-2.5 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent"
-            />
-          </div>
+        {/* Card */}
+        <div className="bg-surface border border-hairline rounded-2xl p-8 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[13px] font-medium text-body mb-1.5 tracking-[0.16px]">
+                E-Mail
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+                className="w-full bg-surface text-ink rounded-lg px-4 py-3 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink focus:ring-0 transition-colors placeholder:text-muted-soft"
+                placeholder="name@bistum.de"
+              />
+            </div>
+            <div>
+              <label className="block text-[13px] font-medium text-body mb-1.5 tracking-[0.16px]">
+                Passwort
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                className="w-full bg-surface text-ink rounded-lg px-4 py-3 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink focus:ring-0 transition-colors placeholder:text-muted-soft"
+                placeholder="••••••••"
+              />
+            </div>
 
-          {error && (
-            <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
-          )}
+            {error && (
+              <p className="text-[#dc2626] text-[13px] bg-red-50 border border-red-100 rounded-lg px-3 py-2.5">
+                {error}
+              </p>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-2.5 rounded-lg transition-colors"
-          >
-            {loading ? 'Anmelden…' : 'Anmelden'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-ink-warm hover:bg-ink disabled:opacity-50 text-white font-medium py-2.5 rounded-pill text-[15px] transition-colors mt-2"
+            >
+              {loading ? 'Anmelden…' : 'Anmelden'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )
