@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchAllUsers, updateUserRole, updateUserGroup, updateUserDiocese, createUser } from '../api/users'
+import { fetchAllUsers, updateUserRole, updateUserGroup, updateUserDiocese, updateUserName, createUser, deleteUser, setUserBlocked, resetUserPassword } from '../api/users'
 import { fetchGroups } from '../api/groups'
 import { fetchDioceses } from '../api/dioceses'
 import { useAuth } from '../context/AuthContext'
@@ -20,6 +20,8 @@ const roleBadge: Record<UserRole, string> = {
   admin: 'bg-canvas-deep text-white',
 }
 
+const NO_DIOCESE = '__none__'
+
 export function UsersPage() {
   const queryClient = useQueryClient()
   const { appUser } = useAuth()
@@ -35,6 +37,12 @@ export function UsersPage() {
   const [filterDiocese, setFilterDiocese] = useState('')
   const [filterGroup, setFilterGroup] = useState('')
 
+  const [editingNameUid, setEditingNameUid] = useState<string | null>(null)
+  const [editingNameValue, setEditingNameValue] = useState('')
+
+  const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null)
+  const [resetSuccessUid, setResetSuccessUid] = useState<string | null>(null)
+
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
     queryFn: fetchAllUsers,
@@ -49,6 +57,14 @@ export function UsersPage() {
     queryKey: ['dioceses'],
     queryFn: fetchDioceses,
     enabled: isAdmin,
+  })
+
+  const nameMutation = useMutation({
+    mutationFn: ({ uid, name }: { uid: string; name: string }) => updateUserName(uid, name),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setEditingNameUid(null)
+    },
   })
 
   const roleMutation = useMutation({
@@ -80,6 +96,27 @@ export function UsersPage() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (uid: string) => deleteUser(uid),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setConfirmDeleteUid(null)
+    },
+  })
+
+  const blockMutation = useMutation({
+    mutationFn: ({ uid, blocked }: { uid: string; blocked: boolean }) => setUserBlocked(uid, blocked),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  })
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: (uid: string) => resetUserPassword(uid),
+    onSuccess: (_data, uid) => {
+      setResetSuccessUid(uid)
+      setTimeout(() => setResetSuccessUid(null), 3000)
+    },
+  })
+
   const groupName = (id: string | null) => groups.find(g => g.id === id)?.name ?? '—'
   const dioceseName = (id: string | null) => {
     if (!id) return '—'
@@ -89,12 +126,25 @@ export function UsersPage() {
   const filtered = users.filter(u => {
     if (search && !u.name.toLowerCase().includes(search.toLowerCase())) return false
     if (filterRole && u.role !== filterRole) return false
-    if (filterDiocese && u.dioceseId !== filterDiocese) return false
+    if (filterDiocese === NO_DIOCESE && u.dioceseId !== null) return false
+    if (filterDiocese && filterDiocese !== NO_DIOCESE && u.dioceseId !== filterDiocese) return false
     if (filterGroup && u.groupId !== filterGroup) return false
     return true
   })
 
   const hasActiveFilter = search || filterRole || filterDiocese || filterGroup
+
+  function startEditName(uid: string, currentName: string) {
+    setEditingNameUid(uid)
+    setEditingNameValue(currentName)
+  }
+
+  function commitNameEdit(uid: string) {
+    const trimmed = editingNameValue.trim()
+    if (trimmed.length >= 2) {
+      nameMutation.mutate({ uid, name: trimmed })
+    }
+  }
 
   const inputClass = "bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
 
@@ -206,13 +256,14 @@ export function UsersPage() {
           <option value="miniteam">Miniteam</option>
           <option value="admin">Admin</option>
         </select>
-        {isAdmin && dioceses.length > 0 && (
+        {isAdmin && (
           <select
             value={filterDiocese}
             onChange={e => setFilterDiocese(e.target.value)}
             className={`bg-surface ${inputClass}`}
           >
             <option value="">Alle Bistümer</option>
+            <option value={NO_DIOCESE}>Kein Bistum</option>
             {dioceses.map(d => (
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
@@ -263,9 +314,54 @@ export function UsersPage() {
           <tbody className="divide-y divide-hairline">
             {filtered.map(u => (
               <tr key={u.uid} className="hover:bg-canvas-soft transition-colors">
+                {/* Name cell — inline editing */}
                 <td className="px-5 py-3.5">
-                  <p className="text-ink font-medium">{u.name}</p>
-                  {u.phone && <p className="text-muted text-[12px] mt-0.5">{u.phone}</p>}
+                  {editingNameUid === u.uid ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        autoFocus
+                        value={editingNameValue}
+                        onChange={e => setEditingNameValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') commitNameEdit(u.uid)
+                          if (e.key === 'Escape') setEditingNameUid(null)
+                        }}
+                        className="bg-canvas text-ink rounded-lg px-2.5 py-1.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors w-40"
+                      />
+                      <button
+                        onClick={() => commitNameEdit(u.uid)}
+                        disabled={editingNameValue.trim().length < 2 || nameMutation.isPending}
+                        className="text-[12px] bg-ink-warm hover:bg-ink disabled:opacity-40 text-white px-2.5 py-1 rounded-pill transition-colors font-medium"
+                      >
+                        {nameMutation.isPending ? '…' : 'OK'}
+                      </button>
+                      <button
+                        onClick={() => setEditingNameUid(null)}
+                        className="text-[12px] text-muted hover:text-ink transition-colors px-1.5 py-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <div>
+                        <p className="text-ink font-medium">{u.name}</p>
+                        {u.phone && <p className="text-muted text-[12px] mt-0.5">{u.phone}</p>}
+                        {u.blocked === 1 && (
+                          <span className="inline-block text-[10px] font-semibold tracking-[0.6px] uppercase bg-red-50 text-red-600 border border-red-100 rounded-pill px-2 py-0.5 mt-1">
+                            Gesperrt
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => startEditName(u.uid, u.name)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted hover:text-ink px-1.5 py-0.5 rounded hover:bg-canvas"
+                        title="Name bearbeiten"
+                      >
+                        ✎
+                      </button>
+                    </div>
+                  )}
                 </td>
                 <td className="px-5 py-3.5">
                   <span className={`px-2.5 py-0.5 rounded-pill text-[11px] font-semibold tracking-[0.6px] uppercase ${roleBadge[u.role]}`}>
@@ -277,7 +373,10 @@ export function UsersPage() {
                 </td>
                 {isAdmin && (
                   <td className="px-5 py-3.5 text-body">
-                    {dioceseName(u.dioceseId)}
+                    {u.dioceseId
+                      ? <span>{dioceseName(u.dioceseId)}</span>
+                      : <span className="text-muted-soft italic text-[13px]">kein Bistum</span>
+                    }
                   </td>
                 )}
                 <td className="px-5 py-3.5">
@@ -312,6 +411,60 @@ export function UsersPage() {
                           <option key={d.id} value={d.id}>{d.name}</option>
                         ))}
                       </select>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5 mt-2">
+                    {/* Reset password */}
+                    {resetSuccessUid === u.uid ? (
+                      <span className="text-[12px] text-[#16a34a] px-2 py-1">✓ E-Mail gesendet</span>
+                    ) : (
+                      <button
+                        onClick={() => resetPasswordMutation.mutate(u.uid)}
+                        disabled={resetPasswordMutation.isPending || appUser?.uid === u.uid}
+                        className="text-[12px] text-muted hover:text-ink disabled:opacity-40 px-2 py-1 rounded hover:bg-canvas transition-colors border border-transparent hover:border-hairline-strong"
+                        title="Passwort-Reset-E-Mail senden"
+                      >
+                        🔑
+                      </button>
+                    )}
+
+                    {/* Block / Unblock */}
+                    <button
+                      onClick={() => blockMutation.mutate({ uid: u.uid, blocked: u.blocked !== 1 })}
+                      disabled={blockMutation.isPending || appUser?.uid === u.uid}
+                      className="text-[12px] text-muted hover:text-ink disabled:opacity-40 px-2 py-1 rounded hover:bg-canvas transition-colors border border-transparent hover:border-hairline-strong"
+                      title={u.blocked === 1 ? 'Entsperren' : 'Sperren'}
+                    >
+                      {u.blocked === 1 ? '🔓' : '🔒'}
+                    </button>
+
+                    {/* Delete */}
+                    {confirmDeleteUid === u.uid ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[12px] text-muted">Wirklich?</span>
+                        <button
+                          onClick={() => deleteMutation.mutate(u.uid)}
+                          disabled={deleteMutation.isPending}
+                          className="text-[12px] bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white px-2 py-1 rounded-pill transition-colors font-medium"
+                        >
+                          {deleteMutation.isPending ? '…' : 'Löschen'}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteUid(null)}
+                          className="text-[12px] text-muted hover:text-ink px-1.5 py-1 transition-colors"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteUid(u.uid)}
+                        disabled={appUser?.uid === u.uid}
+                        className="text-[12px] text-muted hover:text-red-600 disabled:opacity-40 px-2 py-1 rounded hover:bg-red-50 transition-colors border border-transparent hover:border-red-100"
+                        title="Nutzer löschen"
+                      >
+                        🗑
+                      </button>
                     )}
                   </div>
                 </td>
