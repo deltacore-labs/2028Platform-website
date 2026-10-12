@@ -40,6 +40,10 @@ export function UsersPage() {
   const [editingNameUid, setEditingNameUid] = useState<string | null>(null)
   const [editingNameValue, setEditingNameValue] = useState('')
 
+  const [editingRoleUid, setEditingRoleUid] = useState<string | null>(null)
+  const [editingGroupUid, setEditingGroupUid] = useState<string | null>(null)
+  const [editingDioceseUid, setEditingDioceseUid] = useState<string | null>(null)
+
   const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null)
   const [resetSuccessUid, setResetSuccessUid] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -369,57 +373,135 @@ export function UsersPage() {
                   )}
                 </td>
                 <td className="px-5 py-3.5">
-                  <span className={`px-2.5 py-0.5 rounded-pill text-[11px] font-semibold tracking-[0.6px] uppercase ${roleBadge[u.role]}`}>
-                    {roleLabel[u.role]}
-                  </span>
+                  {editingRoleUid === u.uid ? (
+                    <div className="flex items-center gap-2">
+                      <select
+                        autoFocus
+                        value={u.role}
+                        onChange={e => {
+                          roleMutation.mutate({ uid: u.uid, role: e.target.value as UserRole })
+                          setEditingRoleUid(null)
+                        }}
+                        onBlur={() => setEditingRoleUid(null)}
+                        className="bg-canvas text-ink rounded-lg px-2.5 py-1.5 border border-hairline-strong text-[13px] focus:outline-none focus:border-ink transition-colors"
+                      >
+                        <option value="participant">Teilnehmer</option>
+                        <option value="leader">Leiter</option>
+                        <option value="miniteam">Miniteam</option>
+                        {isAdmin && <option value="admin">Admin</option>}
+                      </select>
+                      <button
+                        onClick={() => setEditingRoleUid(null)}
+                        className="text-[12px] text-muted hover:text-ink transition-colors px-1.5 py-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span className={`px-2.5 py-0.5 rounded-pill text-[11px] font-semibold tracking-[0.6px] uppercase ${roleBadge[u.role]}`}>
+                        {roleLabel[u.role]}
+                      </span>
+                      <button
+                        onClick={() => setEditingRoleUid(u.uid)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted hover:text-ink px-1.5 py-0.5 rounded hover:bg-canvas"
+                        title="Rolle bearbeiten"
+                      >
+                        ✎
+                      </button>
+                    </div>
+                  )}
                 </td>
-                <td className="px-5 py-3.5 text-body">
-                  {groupName(u.groupId)}
+                <td className="px-5 py-3.5">
+                  {editingGroupUid === u.uid ? (
+                    <div className="flex items-center gap-2">
+                      <select
+                        autoFocus
+                        value={u.groupId ?? ''}
+                        onChange={e => {
+                          groupMutation.mutate({ uid: u.uid, groupId: e.target.value || null })
+                          setEditingGroupUid(null)
+                        }}
+                        onBlur={() => setEditingGroupUid(null)}
+                        className="bg-canvas text-ink rounded-lg px-2.5 py-1.5 border border-hairline-strong text-[13px] focus:outline-none focus:border-ink transition-colors"
+                      >
+                        <option value="">Keine Gruppe</option>
+                        {groups.map(g => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => setEditingGroupUid(null)}
+                        className="text-[12px] text-muted hover:text-ink transition-colors px-1.5 py-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span className="text-body">
+                        {u.groupId
+                          ? groupName(u.groupId)
+                          : <span className="text-muted-soft italic text-[13px]">keine</span>
+                        }
+                      </span>
+                      <button
+                        onClick={() => setEditingGroupUid(u.uid)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted hover:text-ink px-1.5 py-0.5 rounded hover:bg-canvas"
+                        title="Gruppe bearbeiten"
+                      >
+                        ✎
+                      </button>
+                    </div>
+                  )}
                 </td>
                 {isAdmin && (
-                  <td className="px-5 py-3.5 text-body">
-                    {u.dioceseId
-                      ? <span>{dioceseName(u.dioceseId)}</span>
-                      : <span className="text-muted-soft italic text-[13px]">kein Bistum</span>
-                    }
+                  <td className="px-5 py-3.5">
+                    {editingDioceseUid === u.uid ? (
+                      <div className="flex items-center gap-2">
+                        <select
+                          autoFocus
+                          value={u.dioceseId ?? ''}
+                          onChange={e => {
+                            dioceseMutation.mutate({ uid: u.uid, dioceseId: e.target.value || null })
+                            setEditingDioceseUid(null)
+                          }}
+                          onBlur={() => setEditingDioceseUid(null)}
+                          className="bg-canvas text-ink rounded-lg px-2.5 py-1.5 border border-hairline-strong text-[13px] focus:outline-none focus:border-ink transition-colors"
+                        >
+                          <option value="">Kein Bistum</option>
+                          {dioceses.map(d => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => setEditingDioceseUid(null)}
+                          className="text-[12px] text-muted hover:text-ink transition-colors px-1.5 py-1"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 group">
+                        <span>
+                          {u.dioceseId
+                            ? dioceseName(u.dioceseId)
+                            : <span className="text-muted-soft italic text-[13px]">kein Bistum</span>
+                          }
+                        </span>
+                        <button
+                          onClick={() => setEditingDioceseUid(u.uid)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] text-muted hover:text-ink px-1.5 py-0.5 rounded hover:bg-canvas"
+                          title="Bistum bearbeiten"
+                        >
+                          ✎
+                        </button>
+                      </div>
+                    )}
                   </td>
                 )}
                 <td className="px-5 py-3.5">
-                  <div className="flex gap-2 flex-wrap">
-                    <select
-                      value={u.role}
-                      onChange={e => roleMutation.mutate({ uid: u.uid, role: e.target.value as UserRole })}
-                      className="bg-surface text-body text-[13px] rounded-lg px-2.5 py-1.5 border border-hairline-strong focus:outline-none focus:border-ink transition-colors"
-                    >
-                      <option value="participant">Teilnehmer</option>
-                      <option value="leader">Leiter</option>
-                      <option value="miniteam">Miniteam</option>
-                      {isAdmin && <option value="admin">Admin</option>}
-                    </select>
-                    <select
-                      value={u.groupId ?? ''}
-                      onChange={e => groupMutation.mutate({ uid: u.uid, groupId: e.target.value || null })}
-                      className="bg-surface text-body text-[13px] rounded-lg px-2.5 py-1.5 border border-hairline-strong focus:outline-none focus:border-ink transition-colors"
-                    >
-                      <option value="">Keine Gruppe</option>
-                      {groups.map(g => (
-                        <option key={g.id} value={g.id}>{g.name}</option>
-                      ))}
-                    </select>
-                    {isAdmin && dioceses.length > 0 && (
-                      <select
-                        value={u.dioceseId ?? ''}
-                        onChange={e => dioceseMutation.mutate({ uid: u.uid, dioceseId: e.target.value || null })}
-                        className="bg-surface text-body text-[13px] rounded-lg px-2.5 py-1.5 border border-hairline-strong focus:outline-none focus:border-ink transition-colors"
-                      >
-                        <option value="">Kein Bistum</option>
-                        {dioceses.map(d => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                  <div className="flex gap-1.5 mt-2">
+                  <div className="flex gap-1.5">
                     {/* Reset password */}
                     {resetSuccessUid === u.uid ? (
                       <span className="text-[12px] text-[#16a34a] px-2 py-1">✓ E-Mail gesendet</span>
