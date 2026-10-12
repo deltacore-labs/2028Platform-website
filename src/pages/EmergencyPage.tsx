@@ -4,9 +4,15 @@ import { StatusBadge } from '../components/StatusBadge'
 import type { EmergencyStatus } from '../types'
 
 const typeLabel: Record<string, string> = {
-  emergency: '🚨 Notfall',
-  lost: '🔍 Vermisst',
-  unwell: '🤒 Unwohl',
+  emergency: 'Notfall',
+  lost: 'Vermisst',
+  unwell: 'Unwohl',
+}
+
+const typeIcon: Record<string, string> = {
+  emergency: '⚡',
+  lost: '◎',
+  unwell: '○',
 }
 
 export function EmergencyPage() {
@@ -28,37 +34,61 @@ export function EmergencyPage() {
   const resolved = reports.filter(r => r.status === 'resolved')
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Notfalldashboard</h2>
-        <span className="text-gray-500 text-sm">Aktualisiert automatisch alle 15 s</span>
+    <div className="p-8 max-w-3xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="font-display text-[32px] text-ink" style={{ fontWeight: 300, letterSpacing: '-0.32px' }}>
+            Notfalldashboard
+          </h2>
+          <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
+            Aktualisiert alle 15 s
+          </p>
+        </div>
+        {active.length > 0 && (
+          <span className="bg-red-50 text-[#dc2626] text-[11px] font-semibold tracking-[0.8px] uppercase px-3 py-1 rounded-pill">
+            {active.length} offen
+          </span>
+        )}
       </div>
 
-      {isLoading && <p className="text-gray-500">Lade…</p>}
+      {isLoading && <p className="text-muted text-[15px]">Lade…</p>}
 
+      {/* No active */}
       {active.length === 0 && !isLoading && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-green-700 text-center mb-6">
-          ✓ Keine offenen Notfälle
+        <div className="bg-[#f0faf4] border border-[#bbf7d0] rounded-xl px-6 py-5 text-[#16a34a] text-[15px] mb-6 flex items-center gap-3">
+          <span className="text-lg">✓</span>
+          Keine offenen Notfälle
         </div>
       )}
 
+      {/* Active reports */}
       {active.length > 0 && (
         <section className="mb-8">
-          <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-3">
+          <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted mb-3">
             Aktiv ({active.length})
-          </h3>
+          </p>
           <div className="space-y-3">
             {active.map(r => (
-              <div key={r.id} className="bg-white rounded-xl p-4 border border-red-100 shadow-sm">
+              <div
+                key={r.id}
+                className="bg-surface border border-hairline rounded-xl p-5 shadow-[0_4px_16px_rgba(0,0,0,0.04)]"
+              >
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-gray-900 font-semibold">{typeLabel[r.type] ?? r.type}</span>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[13px]">{typeIcon[r.type] ?? '○'}</span>
+                      <span className="text-ink font-medium text-[15px]">
+                        {typeLabel[r.type] ?? r.type}
+                      </span>
                       <StatusBadge status={r.status} />
                     </div>
-                    <p className="text-gray-700 text-sm">{r.reporterName}</p>
+                    <p className="text-body text-[15px]">{r.reporterName}</p>
                     {r.reporterPhone && (
-                      <a href={`tel:${r.reporterPhone}`} className="text-red-600 text-sm hover:underline">
+                      <a
+                        href={`tel:${r.reporterPhone}`}
+                        className="text-ink-warm text-[14px] hover:underline underline-offset-2"
+                      >
                         {r.reporterPhone}
                       </a>
                     )}
@@ -67,12 +97,12 @@ export function EmergencyPage() {
                         href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="block text-red-600 text-xs mt-1 hover:underline"
+                        className="block text-ink-warm text-[13px] mt-1 hover:underline underline-offset-2"
                       >
                         Standort anzeigen ↗
                       </a>
                     )}
-                    <p className="text-gray-400 text-xs mt-1">
+                    <p className="text-muted text-[13px] mt-2">
                       {new Date(r.createdAt).toLocaleString('de-DE')}
                     </p>
                   </div>
@@ -80,7 +110,7 @@ export function EmergencyPage() {
                     {r.status === 'open' && (
                       <button
                         onClick={() => mutation.mutate({ id: r.id, status: 'in_progress' })}
-                        className="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
+                        className="bg-[#fdf6e8] hover:bg-[#fcecd0] text-[#8a5a00] border border-[#f4c5a8] text-[13px] font-medium px-4 py-2 rounded-pill transition-colors"
                       >
                         Übernehmen
                       </button>
@@ -88,7 +118,7 @@ export function EmergencyPage() {
                     {r.status !== 'resolved' && (
                       <button
                         onClick={() => mutation.mutate({ id: r.id, status: 'resolved' })}
-                        className="bg-green-700 hover:bg-green-600 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
+                        className="bg-[#f0faf4] hover:bg-[#dcfce7] text-[#16a34a] border border-[#bbf7d0] text-[13px] font-medium px-4 py-2 rounded-pill transition-colors"
                       >
                         Erledigt
                       </button>
@@ -101,15 +131,21 @@ export function EmergencyPage() {
         </section>
       )}
 
+      {/* Resolved */}
       {resolved.length > 0 && (
         <section>
-          <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider mb-3">
+          <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted mb-3">
             Erledigt ({resolved.length})
-          </h3>
-          <div className="space-y-2 opacity-50">
+          </p>
+          <div className="space-y-1.5 opacity-50">
             {resolved.map(r => (
-              <div key={r.id} className="bg-red-50 rounded-xl p-3 flex items-center justify-between border border-red-100">
-                <span className="text-gray-500 text-sm">{typeLabel[r.type]} — {r.reporterName}</span>
+              <div
+                key={r.id}
+                className="bg-surface border border-hairline rounded-xl px-4 py-3 flex items-center justify-between"
+              >
+                <span className="text-body text-[14px]">
+                  {typeIcon[r.type]} {typeLabel[r.type]} — {r.reporterName}
+                </span>
                 <StatusBadge status={r.status} />
               </div>
             ))}

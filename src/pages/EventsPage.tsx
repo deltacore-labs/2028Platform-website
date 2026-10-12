@@ -81,81 +81,94 @@ export function EventsPage() {
 
   const sortedEvents = [...events].sort((a, b) => a.startDate - b.startDate)
 
+  const inputClass = "w-full bg-surface text-ink rounded-lg px-4 py-3 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Veranstaltungen</h2>
+    <div className="p-8 max-w-3xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="font-display text-[32px] text-ink" style={{ fontWeight: 300, letterSpacing: '-0.32px' }}>
+            Veranstaltungen
+          </h2>
+          <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
+            {sortedEvents.length} geplant
+          </p>
+        </div>
         <button
           onClick={() => setShowForm(v => !v)}
-          className="bg-red-600 text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors"
+          className={`px-5 py-2.5 rounded-pill text-[15px] font-medium transition-colors ${
+            showForm
+              ? 'bg-surface border border-hairline-strong text-ink hover:bg-canvas'
+              : 'bg-ink-warm hover:bg-ink text-white'
+          }`}
         >
           {showForm ? 'Abbrechen' : '+ Neu'}
         </button>
       </div>
 
+      {/* Form */}
       {showForm && (
-        <div className="bg-white border border-red-100 rounded-xl p-5 mb-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+        <div className="bg-surface border border-hairline rounded-xl p-6 mb-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] space-y-4">
+          <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">
             Neue Veranstaltung
-          </h3>
+          </p>
 
           {createMutation.error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-xs font-mono">
+            <div className="bg-red-50 border border-red-100 rounded-lg p-3 text-[#dc2626] text-[13px]">
               {(createMutation.error as Error).message}
             </div>
           )}
 
-          <div className="flex gap-3 flex-wrap">
-            <input
-              type="text"
-              placeholder="Titel"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              className="flex-1 min-w-[200px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Titel"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            className={inputClass}
+          />
 
           <textarea
             placeholder="Beschreibung (optional)"
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={2}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600 resize-none"
+            className={`${inputClass} resize-none`}
           />
 
-          <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-4 flex-wrap">
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs text-gray-500 mb-1">Start</label>
+              <label className="block text-[13px] font-medium text-body mb-1.5">Start</label>
               <input
                 type="datetime-local"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
+                className={inputClass}
               />
             </div>
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs text-gray-500 mb-1">Ende</label>
+              <label className="block text-[13px] font-medium text-body mb-1.5">Ende</label>
               <input
                 type="datetime-local"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
+                className={inputClass}
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-2">
-              Zielgruppe (leer = alle)
+            <label className="block text-[13px] font-medium text-body mb-2">
+              Zielrollen <span className="text-muted font-normal">(leer = alle)</span>
             </label>
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-4">
               {ALL_ROLES.map(role => (
-                <label key={role} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <label key={role} className="flex items-center gap-1.5 text-[14px] text-body cursor-pointer">
                   <input
                     type="checkbox"
                     checked={targetRoles.includes(role)}
                     onChange={() => toggleRole(role)}
-                    className="accent-red-600"
+                    className="rounded"
                   />
                   {ROLE_LABELS[role]}
                 </label>
@@ -164,11 +177,13 @@ export function EventsPage() {
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Gruppe (optional)</label>
+            <label className="block text-[13px] font-medium text-body mb-1.5">
+              Gruppe <span className="text-muted font-normal">(optional)</span>
+            </label>
             <select
               value={targetGroupId}
               onChange={e => setTargetGroupId(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-red-600"
+              className="bg-surface text-ink rounded-lg px-4 py-3 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink transition-colors"
             >
               <option value="">Alle Gruppen</option>
               {groups.map(g => (
@@ -180,52 +195,53 @@ export function EventsPage() {
           <button
             onClick={() => createMutation.mutate()}
             disabled={title.trim().length < 2 || !startDate || !endDate || createMutation.isPending}
-            className="bg-red-600 text-white text-sm px-4 py-2 rounded-lg font-medium disabled:opacity-50 hover:bg-red-700 transition-colors"
+            className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors"
           >
             {createMutation.isPending ? 'Speichern…' : 'Speichern'}
           </button>
         </div>
       )}
 
-      {isLoading && <p className="text-gray-500">Lade…</p>}
+      {isLoading && <p className="text-muted text-[15px]">Lade…</p>}
 
-      <div className="space-y-3">
+      {/* Events list */}
+      <div className="space-y-2">
         {sortedEvents.length === 0 && !isLoading && (
-          <p className="text-gray-400 text-sm">Noch keine Veranstaltungen.</p>
+          <p className="text-muted text-[15px]">Noch keine Veranstaltungen.</p>
         )}
         {sortedEvents.map(ev => {
           const roles: string[] = (() => {
             try { return JSON.parse(ev.targetRoles) } catch { return [] }
           })()
           return (
-            <div key={ev.id} className="bg-white rounded-xl border border-red-100 shadow-sm p-4">
+            <div key={ev.id} className="bg-surface border border-hairline rounded-xl px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <p className="text-gray-900 font-medium">{ev.title}</p>
+                  <p className="text-ink font-medium text-[15px]">{ev.title}</p>
                   {ev.description && (
-                    <p className="text-gray-500 text-sm mt-0.5">{ev.description}</p>
+                    <p className="text-body text-[14px] mt-0.5">{ev.description}</p>
                   )}
-                  <p className="text-gray-400 text-xs mt-1">
+                  <p className="text-muted text-[13px] mt-1.5">
                     {formatDate(ev.startDate)} – {formatDate(ev.endDate)}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
                   {roles.length > 0 ? (
-                    <div className="flex gap-1 flex-wrap justify-end">
+                    <div className="flex gap-1.5 flex-wrap justify-end">
                       {roles.map((r: string) => (
-                        <span key={r} className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full">
+                        <span key={r} className="text-[11px] bg-surface-strong text-ink-warm font-semibold tracking-[0.6px] uppercase px-2.5 py-0.5 rounded-pill">
                           {ROLE_LABELS[r] ?? r}
                         </span>
                       ))}
                     </div>
                   ) : (
-                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                    <span className="text-[11px] bg-surface-strong text-muted font-semibold tracking-[0.6px] uppercase px-2.5 py-0.5 rounded-pill">
                       Alle
                     </span>
                   )}
                   {ev.groupId && (
-                    <span className="text-xs text-gray-400">
-                      Gruppe: {groups.find(g => g.id === ev.groupId)?.name ?? ev.groupId}
+                    <span className="text-[13px] text-muted">
+                      {groups.find(g => g.id === ev.groupId)?.name ?? ev.groupId}
                     </span>
                   )}
                 </div>

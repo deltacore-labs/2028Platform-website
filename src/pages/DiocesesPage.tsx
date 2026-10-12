@@ -27,38 +27,47 @@ export function DiocesesPage() {
   })
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Bistümer</h2>
+    <div className="p-8 max-w-3xl">
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="font-display text-[32px] text-ink" style={{ fontWeight: 300, letterSpacing: '-0.32px' }}>
+          Bistümer
+        </h2>
+        <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
+          {dioceses.length} eingetragen
+        </p>
+      </div>
 
+      {/* Create form */}
       {isAdmin && (
-        <div className="bg-white border border-red-100 rounded-xl p-5 mb-6 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Neues Bistum anlegen
-          </h3>
+        <div className="bg-surface border border-hairline rounded-xl p-6 mb-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+          <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted mb-4">
+            Neues Bistum
+          </p>
 
           {createMutation.error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3 text-red-700 text-xs font-mono">
+            <div className="bg-red-50 border border-red-100 rounded-lg p-3 mb-3 text-[#dc2626] text-[13px]">
               {(createMutation.error as Error).message}
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
             <input
               type="text"
               placeholder="Name des Bistums"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
+              className="flex-1 bg-surface text-ink rounded-lg px-4 py-3 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
             />
             {name.trim() && (
-              <span className="self-center text-xs text-gray-400 font-mono">
-                ID: {toSlug(name)}
+              <span className="text-[13px] text-muted font-mono shrink-0">
+                {toSlug(name)}
               </span>
             )}
             <button
               onClick={() => createMutation.mutate()}
               disabled={name.trim().length < 2 || createMutation.isPending}
-              className="bg-red-600 text-white text-sm px-4 py-2 rounded-lg font-medium disabled:opacity-50 hover:bg-red-700 transition-colors"
+              className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors shrink-0"
             >
               {createMutation.isPending ? 'Anlegen…' : 'Anlegen'}
             </button>
@@ -66,17 +75,18 @@ export function DiocesesPage() {
         </div>
       )}
 
-      {isLoading && <p className="text-gray-500">Lade…</p>}
+      {isLoading && <p className="text-muted text-[15px]">Lade…</p>}
 
-      <div className="bg-white rounded-xl border border-red-100 shadow-sm overflow-hidden">
+      {/* List */}
+      <div className="bg-surface border border-hairline rounded-xl overflow-hidden">
         {dioceses.length === 0 && !isLoading ? (
-          <p className="p-4 text-gray-400 text-sm">Noch keine Bistümer angelegt.</p>
+          <p className="px-5 py-4 text-muted text-[15px]">Noch keine Bistümer angelegt.</p>
         ) : (
-          <ul className="divide-y divide-red-50">
+          <ul className="divide-y divide-hairline">
             {dioceses.map(d => (
-              <li key={d.id} className="flex items-center justify-between px-4 py-3">
-                <span className="text-gray-900 font-medium">{d.name}</span>
-                <span className="text-gray-400 text-xs font-mono">{d.id}</span>
+              <li key={d.id} className="flex items-center justify-between px-5 py-3.5">
+                <span className="text-ink text-[15px] font-medium">{d.name}</span>
+                <span className="text-muted text-[13px] font-mono">{d.id}</span>
               </li>
             ))}
           </ul>

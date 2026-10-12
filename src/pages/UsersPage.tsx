@@ -12,10 +12,10 @@ const roleLabel: Record<UserRole, string> = {
 }
 
 const roleBadge: Record<UserRole, string> = {
-  participant: 'bg-red-50 text-red-600',
-  leader: 'bg-green-100 text-green-700',
-  miniteam: 'bg-red-100 text-red-700',
-  admin: 'bg-purple-100 text-purple-700',
+  participant: 'bg-surface-strong text-ink-warm',
+  leader: 'bg-[#f0faf4] text-[#16a34a]',
+  miniteam: 'bg-[#f5f0fa] text-[#7c3aed]',
+  admin: 'bg-canvas-deep text-white',
 }
 
 export function UsersPage() {
@@ -59,103 +59,136 @@ export function UsersPage() {
 
   const groupName = (id: string | null) => groups.find(g => g.id === id)?.name ?? '—'
 
-  return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Nutzerverwaltung</h2>
+  const inputClass = "bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
 
-      <div className="bg-white border border-red-100 rounded-xl p-5 mb-6 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Neues Konto anlegen</h3>
-        <p className="text-xs text-gray-400 mb-4">Das Konto erhält ein temporäres Passwort, das beim ersten Login geändert werden muss.</p>
+  return (
+    <div className="p-8 max-w-5xl">
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="font-display text-[32px] text-ink" style={{ fontWeight: 300, letterSpacing: '-0.32px' }}>
+          Nutzerverwaltung
+        </h2>
+        <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
+          {users.length} Nutzer
+        </p>
+      </div>
+
+      {/* Create user card */}
+      <div className="bg-surface border border-hairline rounded-xl p-6 mb-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)]">
+        <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted mb-1">
+          Neues Konto
+        </p>
+        <p className="text-muted text-[13px] mb-4">
+          Das Konto erhält ein temporäres Passwort, das beim ersten Login geändert werden muss.
+        </p>
 
         {createResult && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4 text-sm">
-            <p className="font-semibold text-green-800 mb-1">Konto für {createResult.name} erstellt</p>
-            <p className="text-green-700 text-xs">Temporäres Passwort: <span className="font-mono font-bold">{createResult.tempPassword}</span></p>
-            <button onClick={() => setCreateResult(null)} className="mt-2 text-xs text-green-600 hover:underline">Schließen</button>
+          <div className="bg-[#f0faf4] border border-[#bbf7d0] rounded-xl p-4 mb-4">
+            <p className="font-medium text-[#16a34a] text-[14px] mb-1">
+              Konto für {createResult.name} erstellt
+            </p>
+            <p className="text-[#16a34a] text-[13px]">
+              Temporäres Passwort:{' '}
+              <span className="font-mono font-bold">{createResult.tempPassword}</span>
+            </p>
+            <button
+              onClick={() => setCreateResult(null)}
+              className="mt-2 text-[13px] text-[#16a34a] hover:underline underline-offset-2"
+            >
+              Schließen
+            </button>
           </div>
         )}
 
         {createMutation.error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-red-700 text-xs font-mono">
+          <div className="bg-red-50 border border-red-100 rounded-lg p-3 mb-4 text-[#dc2626] text-[13px] font-mono">
             {(createMutation.error as Error).message}
           </div>
         )}
 
-        <div className="flex gap-3 flex-wrap">
-          <input
-            type="text"
-            placeholder="Vor- und Nachname"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            className="flex-1 min-w-[160px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
-          />
-          <input
-            type="email"
-            placeholder="E-Mail-Adresse"
-            value={newEmail}
-            onChange={e => setNewEmail(e.target.value)}
-            className="flex-1 min-w-[160px] border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
-          />
-          <select
-            value={newRole}
-            onChange={e => setNewRole(e.target.value as UserRole)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-red-600"
-          >
-            <option value="leader">Leiter</option>
-            <option value="participant">Teilnehmer</option>
-            <option value="miniteam">Miniteam</option>
-          </select>
+        <div className="flex gap-3 flex-wrap items-end">
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-[12px] font-medium text-muted mb-1.5 tracking-[0.4px] uppercase">Name</label>
+            <input
+              type="text"
+              placeholder="Vor- und Nachname"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <div className="flex-1 min-w-[160px]">
+            <label className="block text-[12px] font-medium text-muted mb-1.5 tracking-[0.4px] uppercase">E-Mail</label>
+            <input
+              type="email"
+              placeholder="name@bistum.de"
+              value={newEmail}
+              onChange={e => setNewEmail(e.target.value)}
+              className={`w-full ${inputClass}`}
+            />
+          </div>
+          <div>
+            <label className="block text-[12px] font-medium text-muted mb-1.5 tracking-[0.4px] uppercase">Rolle</label>
+            <select
+              value={newRole}
+              onChange={e => setNewRole(e.target.value as UserRole)}
+              className={`bg-surface ${inputClass}`}
+            >
+              <option value="leader">Leiter</option>
+              <option value="participant">Teilnehmer</option>
+              <option value="miniteam">Miniteam</option>
+            </select>
+          </div>
           <button
             onClick={() => createMutation.mutate({ name: newName.trim(), email: newEmail.trim(), role: newRole })}
             disabled={newName.trim().length < 2 || !newEmail.includes('@') || createMutation.isPending}
-            className="bg-red-600 text-white text-sm px-4 py-2 rounded-lg font-medium disabled:opacity-50 hover:bg-red-700 transition-colors"
+            className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors"
           >
             {createMutation.isPending ? 'Anlegen…' : 'Anlegen'}
           </button>
         </div>
       </div>
 
-      {isLoading && <p className="text-gray-500">Lade…</p>}
+      {isLoading && <p className="text-muted text-[15px]">Lade…</p>}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-red-700 text-sm font-mono">
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-4 text-[#dc2626] text-[13px] font-mono">
           Fehler: {(error as Error).message}
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      {/* Table */}
+      <div className="bg-surface border border-hairline rounded-xl overflow-hidden">
+        <table className="w-full text-[14px]">
           <thead>
-            <tr className="text-gray-500 text-left border-b border-red-100">
-              <th className="pb-3 pr-4 font-medium">Name</th>
-              <th className="pb-3 pr-4 font-medium">Rolle</th>
-              <th className="pb-3 pr-4 font-medium">Gruppe</th>
-              <th className="pb-3 font-medium">Aktionen</th>
+            <tr className="border-b border-hairline">
+              <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Name</th>
+              <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Rolle</th>
+              <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Gruppe</th>
+              <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Aktionen</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-hairline">
             {users.map(u => (
-              <tr key={u.uid} className="hover:bg-red-50">
-                <td className="py-3 pr-4">
-                  <p className="text-gray-900">{u.name}</p>
-                  {u.phone && <p className="text-gray-400 text-xs">{u.phone}</p>}
+              <tr key={u.uid} className="hover:bg-canvas-soft transition-colors">
+                <td className="px-5 py-3.5">
+                  <p className="text-ink font-medium">{u.name}</p>
+                  {u.phone && <p className="text-muted text-[12px] mt-0.5">{u.phone}</p>}
                 </td>
-                <td className="py-3 pr-4">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleBadge[u.role]}`}>
+                <td className="px-5 py-3.5">
+                  <span className={`px-2.5 py-0.5 rounded-pill text-[11px] font-semibold tracking-[0.6px] uppercase ${roleBadge[u.role]}`}>
                     {roleLabel[u.role]}
                   </span>
                 </td>
-                <td className="py-3 pr-4 text-gray-500">
+                <td className="px-5 py-3.5 text-body">
                   {groupName(u.groupId)}
                 </td>
-                <td className="py-3">
+                <td className="px-5 py-3.5">
                   <div className="flex gap-2">
                     <select
                       value={u.role}
-                      onChange={e =>
-                        roleMutation.mutate({ uid: u.uid, role: e.target.value as UserRole })
-                      }
-                      className="bg-white text-gray-700 text-xs rounded px-2 py-1 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-red-600"
+                      onChange={e => roleMutation.mutate({ uid: u.uid, role: e.target.value as UserRole })}
+                      className="bg-surface text-body text-[13px] rounded-lg px-2.5 py-1.5 border border-hairline-strong focus:outline-none focus:border-ink transition-colors"
                     >
                       <option value="participant">Teilnehmer</option>
                       <option value="leader">Leiter</option>
@@ -163,10 +196,8 @@ export function UsersPage() {
                     </select>
                     <select
                       value={u.groupId ?? ''}
-                      onChange={e =>
-                        groupMutation.mutate({ uid: u.uid, groupId: e.target.value || null })
-                      }
-                      className="bg-white text-gray-700 text-xs rounded px-2 py-1 border border-gray-300 focus:outline-none focus:ring-1 focus:ring-red-600"
+                      onChange={e => groupMutation.mutate({ uid: u.uid, groupId: e.target.value || null })}
+                      className="bg-surface text-body text-[13px] rounded-lg px-2.5 py-1.5 border border-hairline-strong focus:outline-none focus:border-ink transition-colors"
                     >
                       <option value="">Keine Gruppe</option>
                       {groups.map(g => (

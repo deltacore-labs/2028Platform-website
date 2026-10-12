@@ -43,51 +43,67 @@ export function GroupsPage() {
   })
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Gruppen</h2>
+    <div className="p-8 max-w-3xl">
+      {/* Header */}
+      <div className="mb-8">
+        <h2 className="font-display text-[32px] text-ink" style={{ fontWeight: 300, letterSpacing: '-0.32px' }}>
+          Gruppen
+        </h2>
+        <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
+          {groups.length} Gruppen
+        </p>
+      </div>
 
-      {isLoading && <p className="text-gray-500">Lade…</p>}
+      {isLoading && <p className="text-muted text-[15px]">Lade…</p>}
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {groups.map(g => (
-          <div key={g.id} className="bg-white rounded-xl border border-red-100 shadow-sm">
+          <div key={g.id} className="bg-surface border border-hairline rounded-xl overflow-hidden">
             <button
               onClick={() => setExpandedGroupId(prev => prev === g.id ? null : g.id)}
-              className="w-full text-left p-4 flex items-center justify-between hover:bg-red-50 rounded-xl transition-colors"
+              className="w-full text-left px-5 py-4 flex items-center justify-between hover:bg-canvas-soft transition-colors"
             >
-              <div>
-                <span className="text-gray-900 font-medium">{g.name}</span>
-                {g.leaderName && (
-                  <span className="text-gray-500 text-sm ml-2">· Leiter: {g.leaderName}</span>
-                )}
-                {g.leaderPhone && (
-                  <a
-                    href={`tel:${g.leaderPhone}`}
-                    onClick={e => e.stopPropagation()}
-                    className="text-red-600 text-sm ml-2 hover:underline"
-                  >
-                    {g.leaderPhone}
-                  </a>
-                )}
+              <div className="flex items-center gap-3">
+                <div>
+                  <span className="text-ink font-medium text-[15px]">{g.name}</span>
+                  {g.leaderName && (
+                    <span className="text-muted text-[14px] ml-2">· {g.leaderName}</span>
+                  )}
+                  {g.leaderPhone && (
+                    <a
+                      href={`tel:${g.leaderPhone}`}
+                      onClick={e => e.stopPropagation()}
+                      className="text-ink-warm text-[14px] ml-2 hover:underline underline-offset-2"
+                    >
+                      {g.leaderPhone}
+                    </a>
+                  )}
+                </div>
               </div>
-              <span className="text-gray-400 text-sm">
+              <span className="text-muted-soft text-[13px]">
                 {expandedGroupId === g.id ? '▲' : '▼'}
               </span>
             </button>
 
             {expandedGroupId === g.id && (
-              <div className="border-t border-red-100 px-4 py-3 space-y-4">
+              <div className="border-t border-hairline px-5 py-4 space-y-5">
+                {/* Members */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Mitglieder</p>
+                  <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted mb-3">
+                    Mitglieder
+                  </p>
                   {members.length === 0 ? (
-                    <p className="text-gray-400 text-sm">Keine Mitglieder</p>
+                    <p className="text-muted text-[14px]">Keine Mitglieder</p>
                   ) : (
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {members.map(m => (
-                        <li key={m.uid} className="flex items-center justify-between text-sm">
-                          <span className="text-gray-700">{m.name}</span>
+                        <li key={m.uid} className="flex items-center justify-between">
+                          <span className="text-body text-[15px]">{m.name}</span>
                           {m.phone && (
-                            <a href={`tel:${m.phone}`} className="text-red-600 hover:underline text-xs">
+                            <a
+                              href={`tel:${m.phone}`}
+                              className="text-ink-warm text-[13px] hover:underline underline-offset-2"
+                            >
                               {m.phone}
                             </a>
                           )}
@@ -97,41 +113,42 @@ export function GroupsPage() {
                   )}
                 </div>
 
+                {/* Join requests */}
                 {isPrivileged && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                    <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted mb-3 flex items-center gap-2">
                       Beitrittsanfragen
                       {joinRequests.length > 0 && (
-                        <span className="ml-1.5 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5">
+                        <span className="bg-ink-warm text-white text-[11px] font-bold rounded-full px-2 py-0.5">
                           {joinRequests.length}
                         </span>
                       )}
                     </p>
                     {joinRequests.length === 0 ? (
-                      <p className="text-gray-400 text-sm">Keine offenen Anfragen</p>
+                      <p className="text-muted text-[14px]">Keine offenen Anfragen</p>
                     ) : (
                       <ul className="space-y-2">
                         {joinRequests.map(req => (
                           <li
                             key={req.id}
-                            className="flex items-center justify-between bg-red-50 rounded-lg px-3 py-2"
+                            className="flex items-center justify-between bg-canvas rounded-lg px-4 py-3"
                           >
                             <div>
-                              <span className="text-gray-800 text-sm font-medium">{req.requester_name}</span>
-                              <span className="text-gray-400 text-xs ml-2">{formatDate(req.created_at)}</span>
+                              <span className="text-ink text-[15px] font-medium">{req.requester_name}</span>
+                              <span className="text-muted text-[13px] ml-2">{formatDate(req.created_at)}</span>
                             </div>
                             <div className="flex gap-2">
                               <button
                                 onClick={() => resolveMutation.mutate({ requestId: req.id, action: 'approve' })}
                                 disabled={resolveMutation.isPending}
-                                className="text-xs bg-green-600 text-white px-2.5 py-1 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                                className="text-[13px] bg-[#f0faf4] hover:bg-[#dcfce7] text-[#16a34a] border border-[#bbf7d0] px-3 py-1.5 rounded-pill disabled:opacity-50 transition-colors font-medium"
                               >
                                 Annehmen
                               </button>
                               <button
                                 onClick={() => resolveMutation.mutate({ requestId: req.id, action: 'reject' })}
                                 disabled={resolveMutation.isPending}
-                                className="text-xs bg-white border border-gray-300 text-gray-600 px-2.5 py-1 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                className="text-[13px] bg-surface border border-hairline-strong text-body px-3 py-1.5 rounded-pill hover:bg-canvas disabled:opacity-50 transition-colors font-medium"
                               >
                                 Ablehnen
                               </button>
