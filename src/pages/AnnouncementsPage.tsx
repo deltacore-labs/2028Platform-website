@@ -30,6 +30,8 @@ export function AnnouncementsPage() {
   const [text, setText] = useState('')
   const [priority, setPriority] = useState<AnnouncementPriority>('info')
   const [targetGroupIds, setTargetGroupIds] = useState<string[]>([])
+  const [filterPriority, setFilterPriority] = useState<AnnouncementPriority | ''>('')
+  const [search, setSearch] = useState('')
 
   const { data: announcements = [], isLoading } = useQuery({
     queryKey: ['announcements'],
@@ -54,6 +56,14 @@ export function AnnouncementsPage() {
     },
   })
 
+  const filtered = announcements.filter(a => {
+    if (filterPriority && a.priority !== filterPriority) return false
+    if (search && !a.text.toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
+
+  const hasFilter = filterPriority || search
+
   return (
     <div className="p-8 max-w-3xl">
       {/* Header */}
@@ -63,7 +73,7 @@ export function AnnouncementsPage() {
             Ankündigungen
           </h2>
           <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
-            {announcements.length} gesamt
+            {hasFilter ? `${filtered.length} von ${announcements.length} gesamt` : `${announcements.length} gesamt`}
           </p>
         </div>
         <button
@@ -145,11 +155,43 @@ export function AnnouncementsPage() {
         </div>
       )}
 
+      {/* Filter bar */}
+      <div className="flex gap-3 flex-wrap mb-4">
+        <input
+          type="text"
+          placeholder="Text suchen…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="flex-1 min-w-[160px] bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
+        />
+        <select
+          value={filterPriority}
+          onChange={e => setFilterPriority(e.target.value as AnnouncementPriority | '')}
+          className="bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors"
+        >
+          <option value="">Alle Prioritäten</option>
+          <option value="info">Info</option>
+          <option value="important">Wichtig</option>
+          <option value="critical">Kritisch</option>
+        </select>
+        {hasFilter && (
+          <button
+            onClick={() => { setSearch(''); setFilterPriority('') }}
+            className="text-[13px] text-muted hover:text-ink transition-colors px-3 py-2.5 rounded-lg border border-hairline-strong hover:bg-canvas"
+          >
+            Zurücksetzen
+          </button>
+        )}
+      </div>
+
       {isLoading && <p className="text-muted text-[15px]">Lade…</p>}
 
       {/* List */}
       <div className="space-y-2">
-        {announcements.map(a => (
+        {filtered.length === 0 && !isLoading && (
+          <p className="text-muted text-[15px]">{hasFilter ? 'Keine Treffer.' : 'Noch keine Ankündigungen.'}</p>
+        )}
+        {filtered.map(a => (
           <div
             key={a.id}
             className={`bg-surface border border-hairline rounded-xl px-5 py-4 ${priorityAccent[a.priority]}`}

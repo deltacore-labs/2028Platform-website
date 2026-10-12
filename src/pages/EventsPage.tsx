@@ -41,6 +41,10 @@ export function EventsPage() {
   const [targetGroupId, setTargetGroupId] = useState('')
   const [showForm, setShowForm] = useState(false)
 
+  const [search, setSearch] = useState('')
+  const [filterRole, setFilterRole] = useState('')
+  const [filterGroup, setFilterGroup] = useState('')
+
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['events'],
     queryFn: fetchEvents,
@@ -81,6 +85,18 @@ export function EventsPage() {
 
   const sortedEvents = [...events].sort((a, b) => a.startDate - b.startDate)
 
+  const filtered = sortedEvents.filter(ev => {
+    if (search && !ev.title.toLowerCase().includes(search.toLowerCase())) return false
+    if (filterGroup && ev.groupId !== filterGroup) return false
+    if (filterRole) {
+      const roles: string[] = (() => { try { return JSON.parse(ev.targetRoles) } catch { return [] } })()
+      if (roles.length > 0 && !roles.includes(filterRole)) return false
+    }
+    return true
+  })
+
+  const hasFilter = search || filterRole || filterGroup
+
   const inputClass = "w-full bg-surface text-ink rounded-lg px-4 py-3 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
 
   return (
@@ -92,7 +108,7 @@ export function EventsPage() {
             Veranstaltungen
           </h2>
           <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
-            {sortedEvents.length} geplant
+            {hasFilter ? `${filtered.length} von ${sortedEvents.length} geplant` : `${sortedEvents.length} geplant`}
           </p>
         </div>
         <button
@@ -202,14 +218,53 @@ export function EventsPage() {
         </div>
       )}
 
+      {/* Filter bar */}
+      <div className="flex gap-3 flex-wrap mb-4">
+        <input
+          type="text"
+          placeholder="Titel suchen…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="flex-1 min-w-[160px] bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
+        />
+        <select
+          value={filterRole}
+          onChange={e => setFilterRole(e.target.value)}
+          className="bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors"
+        >
+          <option value="">Alle Rollen</option>
+          {ALL_ROLES.map(r => (
+            <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+          ))}
+        </select>
+        <select
+          value={filterGroup}
+          onChange={e => setFilterGroup(e.target.value)}
+          className="bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors"
+        >
+          <option value="">Alle Gruppen</option>
+          {groups.map(g => (
+            <option key={g.id} value={g.id}>{g.name}</option>
+          ))}
+        </select>
+        {hasFilter && (
+          <button
+            onClick={() => { setSearch(''); setFilterRole(''); setFilterGroup('') }}
+            className="text-[13px] text-muted hover:text-ink transition-colors px-3 py-2.5 rounded-lg border border-hairline-strong hover:bg-canvas"
+          >
+            Zurücksetzen
+          </button>
+        )}
+      </div>
+
       {isLoading && <p className="text-muted text-[15px]">Lade…</p>}
 
       {/* Events list */}
       <div className="space-y-2">
-        {sortedEvents.length === 0 && !isLoading && (
-          <p className="text-muted text-[15px]">Noch keine Veranstaltungen.</p>
+        {filtered.length === 0 && !isLoading && (
+          <p className="text-muted text-[15px]">{hasFilter ? 'Keine Treffer.' : 'Noch keine Veranstaltungen.'}</p>
         )}
-        {sortedEvents.map(ev => {
+        {filtered.map(ev => {
           const roles: string[] = (() => {
             try { return JSON.parse(ev.targetRoles) } catch { return [] }
           })()

@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchAllUsers, updateUserRole, updateUserGroup, createUser } from '../api/users'
+import { fetchAllUsers, updateUserRole, updateUserGroup, updateUserDiocese, createUser } from '../api/users'
 import { fetchGroups } from '../api/groups'
+import { fetchDioceses } from '../api/dioceses'
+import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../types'
 
 const roleLabel: Record<UserRole, string> = {
@@ -20,10 +22,18 @@ const roleBadge: Record<UserRole, string> = {
 
 export function UsersPage() {
   const queryClient = useQueryClient()
+  const { appUser } = useAuth()
+  const isAdmin = appUser?.role === 'admin'
+
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newRole, setNewRole] = useState<UserRole>('leader')
   const [createResult, setCreateResult] = useState<{ name: string; tempPassword: string } | null>(null)
+
+  const [search, setSearch] = useState('')
+  const [filterRole, setFilterRole] = useState<UserRole | ''>('')
+  const [filterDiocese, setFilterDiocese] = useState('')
+  const [filterGroup, setFilterGroup] = useState('')
 
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
@@ -33,6 +43,12 @@ export function UsersPage() {
   const { data: groups = [] } = useQuery({
     queryKey: ['groups'],
     queryFn: fetchGroups,
+  })
+
+  const { data: dioceses = [] } = useQuery({
+    queryKey: ['dioceses'],
+    queryFn: fetchDioceses,
+    enabled: isAdmin,
   })
 
   const roleMutation = useMutation({
@@ -46,8 +62,15 @@ export function UsersPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
+  const dioceseMutation = useMutation({
+    mutationFn: ({ uid, dioceseId }: { uid: string; dioceseId: string | null }) =>
+      updateUserDiocese(uid, dioceseId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+  })
+
   const createMutation = useMutation({
-    mutationFn: ({ name, email, role }: { name: string; email: string; role: UserRole }) => createUser(name, email, role),
+    mutationFn: ({ name, email, role }: { name: string; email: string; role: UserRole }) =>
+      createUser(name, email, role),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setCreateResult({ name: newName, tempPassword: data.temp_password })
@@ -58,6 +81,20 @@ export function UsersPage() {
   })
 
   const groupName = (id: string | null) => groups.find(g => g.id === id)?.name ?? '—'
+  const dioceseName = (id: string | null) => {
+    if (!id) return '—'
+    return dioceses.find(d => d.id === id)?.name ?? id
+  }
+
+  const filtered = users.filter(u => {
+    if (search && !u.name.toLowerCase().includes(search.toLowerCase())) return false
+    if (filterRole && u.role !== filterRole) return false
+    if (filterDiocese && u.dioceseId !== filterDiocese) return false
+    if (filterGroup && u.groupId !== filterGroup) return false
+    return true
+  })
+
+  const hasActiveFilter = search || filterRole || filterDiocese || filterGroup
 
   const inputClass = "bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
 
@@ -69,7 +106,7 @@ export function UsersPage() {
           Nutzerverwaltung
         </h2>
         <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
-          {users.length} Nutzer
+          {hasActiveFilter ? `${filtered.length} von ${users.length} Nutzern` : `${users.length} Nutzer`}
         </p>
       </div>
 
@@ -149,6 +186,58 @@ export function UsersPage() {
         </div>
       </div>
 
+      {/* Filter bar */}
+      <div className="flex gap-3 flex-wrap mb-4">
+        <input
+          type="text"
+          placeholder="Name suchen…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className={`flex-1 min-w-[160px] ${inputClass}`}
+        />
+        <select
+          value={filterRole}
+          onChange={e => setFilterRole(e.target.value as UserRole | '')}
+          className={`bg-surface ${inputClass}`}
+        >
+          <option value="">Alle Rollen</option>
+          <option value="participant">Teilnehmer</option>
+          <option value="leader">Leiter</option>
+          <option value="miniteam">Miniteam</option>
+          <option value="admin">Admin</option>
+        </select>
+        {isAdmin && dioceses.length > 0 && (
+          <select
+            value={filterDiocese}
+            onChange={e => setFilterDiocese(e.target.value)}
+            className={`bg-surface ${inputClass}`}
+          >
+            <option value="">Alle Bistümer</option>
+            {dioceses.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        )}
+        <select
+          value={filterGroup}
+          onChange={e => setFilterGroup(e.target.value)}
+          className={`bg-surface ${inputClass}`}
+        >
+          <option value="">Alle Gruppen</option>
+          {groups.map(g => (
+            <option key={g.id} value={g.id}>{g.name}</option>
+          ))}
+        </select>
+        {hasActiveFilter && (
+          <button
+            onClick={() => { setSearch(''); setFilterRole(''); setFilterDiocese(''); setFilterGroup('') }}
+            className="text-[13px] text-muted hover:text-ink transition-colors px-3 py-2.5 rounded-lg border border-hairline-strong hover:bg-canvas"
+          >
+            Zurücksetzen
+          </button>
+        )}
+      </div>
+
       {isLoading && <p className="text-muted text-[15px]">Lade…</p>}
 
       {error && (
@@ -165,11 +254,14 @@ export function UsersPage() {
               <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Name</th>
               <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Rolle</th>
               <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Gruppe</th>
+              {isAdmin && (
+                <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Bistum</th>
+              )}
               <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Aktionen</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-hairline">
-            {users.map(u => (
+            {filtered.map(u => (
               <tr key={u.uid} className="hover:bg-canvas-soft transition-colors">
                 <td className="px-5 py-3.5">
                   <p className="text-ink font-medium">{u.name}</p>
@@ -183,8 +275,13 @@ export function UsersPage() {
                 <td className="px-5 py-3.5 text-body">
                   {groupName(u.groupId)}
                 </td>
+                {isAdmin && (
+                  <td className="px-5 py-3.5 text-body">
+                    {dioceseName(u.dioceseId)}
+                  </td>
+                )}
                 <td className="px-5 py-3.5">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <select
                       value={u.role}
                       onChange={e => roleMutation.mutate({ uid: u.uid, role: e.target.value as UserRole })}
@@ -204,10 +301,29 @@ export function UsersPage() {
                         <option key={g.id} value={g.id}>{g.name}</option>
                       ))}
                     </select>
+                    {isAdmin && dioceses.length > 0 && (
+                      <select
+                        value={u.dioceseId ?? ''}
+                        onChange={e => dioceseMutation.mutate({ uid: u.uid, dioceseId: e.target.value || null })}
+                        className="bg-surface text-body text-[13px] rounded-lg px-2.5 py-1.5 border border-hairline-strong focus:outline-none focus:border-ink transition-colors"
+                      >
+                        <option value="">Kein Bistum</option>
+                        {dioceses.map(d => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && !isLoading && (
+              <tr>
+                <td colSpan={isAdmin ? 5 : 4} className="px-5 py-6 text-muted text-[14px] text-center">
+                  Keine Nutzer gefunden.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

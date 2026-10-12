@@ -11,6 +11,7 @@ export interface AppUser {
   role: UserRole
   groupId: string | null
   phone: string | null
+  dioceseId: string | null
   fcmToken: string | null
   mustChangePassword: number
   createdAt: string
