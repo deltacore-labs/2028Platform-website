@@ -11,6 +11,7 @@ import { UsersPage } from './pages/UsersPage'
 import { GroupsPage } from './pages/GroupsPage'
 import { EventsPage } from './pages/EventsPage'
 import { DiocesesPage } from './pages/DiocesesPage'
+import { OverviewPage } from './pages/OverviewPage'
 
 const queryClient = new QueryClient()
 
@@ -30,7 +31,8 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/admin/emergency" replace />} />
+              <Route index element={<Navigate to="/admin/overview" replace />} />
+              <Route path="overview" element={<OverviewPage />} />
               <Route
                 path="emergency"
                 element={

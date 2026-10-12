@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { ForcePasswordChange } from './ForcePasswordChange'
 
 const navItems = [
+  { to: '/admin/overview', label: 'Übersicht', icon: '◫', roles: ['miniteam', 'leader', 'admin'] },
   { to: '/admin/emergency', label: 'Notfall', icon: '⚡', roles: ['miniteam', 'admin'] },
   { to: '/admin/announcements', label: 'Ankündigungen', icon: '◎', roles: ['miniteam', 'leader', 'admin'] },
   { to: '/admin/events', label: 'Veranstaltungen', icon: '◷', roles: ['miniteam', 'leader', 'admin'] },
