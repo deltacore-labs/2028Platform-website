@@ -157,7 +157,7 @@ export function UsersPage() {
   const inputClass = "bg-surface text-ink rounded-lg px-3 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 md:p-8 max-w-5xl">
       {/* Header */}
       <div className="mb-8">
         <h2 className="font-display text-[32px] text-ink" style={{ fontWeight: 300, letterSpacing: '-0.32px' }}>
@@ -307,8 +307,9 @@ export function UsersPage() {
       )}
 
       {/* Table */}
-      <div className="bg-surface border border-hairline rounded-xl overflow-hidden">
-        <table className="w-full text-[14px]">
+      <div className="overflow-x-auto rounded-xl border border-hairline">
+        <div className="bg-surface min-w-[600px]">
+          <table className="w-full text-[14px]">
           <thead>
             <tr className="border-b border-hairline">
               <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Name</th>
@@ -567,6 +568,7 @@ export function UsersPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {actionError && (
