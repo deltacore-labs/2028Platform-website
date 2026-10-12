@@ -484,6 +484,18 @@ export function UsersPage() {
           </tbody>
         </table>
       </div>
+
+      {actionError && (
+        <div className="bg-red-50 border border-red-100 rounded-xl p-4 mt-4 flex items-center justify-between">
+          <p className="text-[#dc2626] text-[13px] font-mono">{actionError}</p>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-[#dc2626] text-[13px] hover:opacity-70 transition-opacity ml-4"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   )
 }
