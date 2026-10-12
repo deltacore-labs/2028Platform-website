@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
+import { ForcePasswordChange } from './ForcePasswordChange'
 
 const navItems = [
   { to: '/admin/emergency', label: 'Notfall', icon: '⚡', roles: ['miniteam', 'admin'] },
@@ -15,6 +16,10 @@ const navItems = [
 export function Layout() {
   const { appUser } = useAuth()
   const role = appUser?.role ?? 'participant'
+
+  if (appUser?.mustChangePassword) {
+    return <ForcePasswordChange />
+  }
 
   const visibleItems = navItems.filter(item =>
     (item.roles as readonly string[]).includes(role)

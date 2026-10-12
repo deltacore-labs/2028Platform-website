@@ -9,4 +9,12 @@ export const createAnnouncement = (payload: {
   priority: AnnouncementPriority
   targetGroupIds: string[]
   targetRoles: UserRole[]
-}) => apiClient.post<Announcement>('/v1/announcements', payload).then(r => r.data)
+}) =>
+  apiClient
+    .post<Announcement>('/v1/announcements', {
+      text: payload.text,
+      priority: payload.priority,
+      target_group_ids: payload.targetGroupIds,
+      target_roles: payload.targetRoles,
+    })
+    .then(r => r.data)

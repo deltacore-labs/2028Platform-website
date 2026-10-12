@@ -8,25 +8,34 @@ interface AuthContextValue {
   firebaseUser: User | null
   appUser: AppUser | null
   loading: boolean
+  refreshUser: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextValue>({ firebaseUser: null, appUser: null, loading: true })
+const AuthContext = createContext<AuthContextValue>({ firebaseUser: null, appUser: null, loading: true, refreshUser: async () => {} })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null)
   const [appUser, setAppUser] = useState<AppUser | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const fetchAppUser = async () => {
+    try {
+      const { data } = await apiClient.get<AppUser>('/v1/users/me')
+      setAppUser(data)
+    } catch {
+      setAppUser(null)
+    }
+  }
+
+  const refreshUser = async () => {
+    await fetchAppUser()
+  }
+
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, async (user) => {
       setFirebaseUser(user)
       if (user) {
-        try {
-          const { data } = await apiClient.get<AppUser>('/v1/users/me')
-          setAppUser(data)
-        } catch {
-          setAppUser(null)
-        }
+        await fetchAppUser()
       } else {
         setAppUser(null)
       }
@@ -36,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ firebaseUser, appUser, loading }}>
+    <AuthContext.Provider value={{ firebaseUser, appUser, loading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
