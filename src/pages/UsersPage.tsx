@@ -228,6 +228,7 @@ export function UsersPage() {
               <option value="leader">Leiter</option>
               <option value="participant">Teilnehmer</option>
               <option value="miniteam">Miniteam</option>
+              {isAdmin && <option value="admin">Admin</option>}
             </select>
           </div>
           <button
@@ -393,6 +394,7 @@ export function UsersPage() {
                       <option value="participant">Teilnehmer</option>
                       <option value="leader">Leiter</option>
                       <option value="miniteam">Miniteam</option>
+                      {isAdmin && <option value="admin">Admin</option>}
                     </select>
                     <select
                       value={u.groupId ?? ''}
