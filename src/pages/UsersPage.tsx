@@ -42,6 +42,7 @@ export function UsersPage() {
 
   const [confirmDeleteUid, setConfirmDeleteUid] = useState<string | null>(null)
   const [resetSuccessUid, setResetSuccessUid] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const { data: users = [], isLoading, error } = useQuery({
     queryKey: ['users'],
@@ -102,11 +103,13 @@ export function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setConfirmDeleteUid(null)
     },
+    onError: (err: Error) => setActionError(err.message),
   })
 
   const blockMutation = useMutation({
     mutationFn: ({ uid, blocked }: { uid: string; blocked: boolean }) => setUserBlocked(uid, blocked),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+    onError: (err: Error) => setActionError(err.message),
   })
 
   const resetPasswordMutation = useMutation({
@@ -115,6 +118,7 @@ export function UsersPage() {
       setResetSuccessUid(uid)
       setTimeout(() => setResetSuccessUid(null), 3000)
     },
+    onError: (err: Error) => setActionError(err.message),
   })
 
   const groupName = (id: string | null) => groups.find(g => g.id === id)?.name ?? '—'
