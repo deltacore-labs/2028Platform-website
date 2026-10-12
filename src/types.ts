@@ -14,6 +14,7 @@ export interface AppUser {
   dioceseId: string | null
   fcmToken: string | null
   mustChangePassword: number
+  blocked: number
   createdAt: string
   updatedAt: string
 }
