@@ -42,6 +42,7 @@ export interface Announcement {
   createdBy: string
   createdAt: string
   isRead: boolean
+  archivedAt: string | null
 }
 
 export interface EmergencyReport {
