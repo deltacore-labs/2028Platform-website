@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchAnnouncements, createAnnouncement } from '../api/announcements'
+import { fetchAnnouncements, createAnnouncement, deleteAnnouncement, archiveAnnouncement, unarchiveAnnouncement } from '../api/announcements'
 import { fetchGroups } from '../api/groups'
 import { useAuth } from '../context/AuthContext'
-import type { AnnouncementPriority } from '../types'
+import type { Announcement, AnnouncementPriority } from '../types'
 
 const priorityAccent: Record<AnnouncementPriority, string> = {
   info: 'border-l-2 border-[#a8c8e8]',
@@ -32,10 +32,13 @@ export function AnnouncementsPage() {
   const [targetGroupIds, setTargetGroupIds] = useState<string[]>([])
   const [filterPriority, setFilterPriority] = useState<AnnouncementPriority | ''>('')
   const [search, setSearch] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
+
+  const canManage = appUser?.role === 'leader' || appUser?.role === 'miniteam' || appUser?.role === 'admin'
 
   const { data: announcements = [], isLoading } = useQuery({
-    queryKey: ['announcements'],
-    queryFn: fetchAnnouncements,
+    queryKey: ['announcements', showArchived],
+    queryFn: () => fetchAnnouncements(showArchived),
   })
 
   const { data: groups = [] } = useQuery({
@@ -44,7 +47,7 @@ export function AnnouncementsPage() {
     enabled: appUser?.role === 'miniteam',
   })
 
-  const mutation = useMutation({
+  const createMutation = useMutation({
     mutationFn: () =>
       createAnnouncement({ text, priority, targetGroupIds, targetRoles: [] }),
     onSuccess: () => {
@@ -55,6 +58,28 @@ export function AnnouncementsPage() {
       setShowForm(false)
     },
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteAnnouncement(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['announcements'] }),
+  })
+
+  const archiveMutation = useMutation({
+    mutationFn: (a: Announcement) =>
+      a.archivedAt ? unarchiveAnnouncement(a.id) : archiveAnnouncement(a.id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['announcements'] }),
+  })
+
+  function canManageItem(a: Announcement): boolean {
+    if (!appUser || !canManage) return false
+    if (appUser.role === 'leader') return a.createdBy === appUser.uid
+    return true
+  }
+
+  function handleDelete(a: Announcement) {
+    if (!confirm(`Durchsage wirklich löschen?\n\n"${a.text.slice(0, 80)}"`)) return
+    deleteMutation.mutate(a.id)
+  }
 
   const filtered = announcements.filter(a => {
     if (filterPriority && a.priority !== filterPriority) return false
@@ -145,18 +170,18 @@ export function AnnouncementsPage() {
             )}
 
             <button
-              onClick={() => mutation.mutate()}
-              disabled={!text.trim() || mutation.isPending}
+              onClick={() => createMutation.mutate()}
+              disabled={!text.trim() || createMutation.isPending}
               className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors"
             >
-              {mutation.isPending ? 'Senden…' : 'Senden'}
+              {createMutation.isPending ? 'Senden…' : 'Senden'}
             </button>
           </div>
         </div>
       )}
 
-      {/* Filter bar */}
-      <div className="flex gap-3 flex-wrap mb-4">
+      {/* Filter + archive toggle bar */}
+      <div className="flex gap-3 flex-wrap mb-4 items-center">
         <input
           type="text"
           placeholder="Text suchen…"
@@ -174,6 +199,17 @@ export function AnnouncementsPage() {
           <option value="important">Wichtig</option>
           <option value="critical">Kritisch</option>
         </select>
+        {canManage && (
+          <label className="flex items-center gap-2 text-[13px] text-muted cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={e => setShowArchived(e.target.checked)}
+              className="rounded"
+            />
+            Archiv
+          </label>
+        )}
         {hasFilter && (
           <button
             onClick={() => { setSearch(''); setFilterPriority('') }}
@@ -191,22 +227,66 @@ export function AnnouncementsPage() {
         {filtered.length === 0 && !isLoading && (
           <p className="text-muted text-[15px]">{hasFilter ? 'Keine Treffer.' : 'Noch keine Ankündigungen.'}</p>
         )}
-        {filtered.map(a => (
-          <div
-            key={a.id}
-            className={`bg-surface border border-hairline rounded-xl px-5 py-4 ${priorityAccent[a.priority]}`}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <span className={`text-[11px] font-semibold tracking-[0.8px] uppercase px-2 py-0.5 rounded-pill ${priorityBadge[a.priority]}`}>
-                {priorityLabel[a.priority]}
-              </span>
-              <span className="text-muted text-[13px]">
-                {new Date(a.createdAt).toLocaleString('de-DE')}
-              </span>
+        {filtered.map(a => {
+          const isArchived = a.archivedAt !== null
+          return (
+            <div
+              key={a.id}
+              className={`bg-surface border border-hairline rounded-xl px-5 py-4 ${isArchived ? 'border-l-2 border-l-gray-300 opacity-50' : priorityAccent[a.priority]}`}
+            >
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className={`text-[11px] font-semibold tracking-[0.8px] uppercase px-2 py-0.5 rounded-pill ${isArchived ? 'bg-gray-100 text-gray-500' : priorityBadge[a.priority]}`}>
+                      {priorityLabel[a.priority]}
+                    </span>
+                    <span className="text-muted text-[13px]">
+                      {new Date(a.createdAt).toLocaleString('de-DE')}
+                    </span>
+                    {isArchived && (
+                      <span className="text-[11px] text-gray-400 border border-gray-300 rounded px-1.5 py-0.5 font-medium">
+                        Archiviert
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-[15px] leading-relaxed ${isArchived ? 'text-muted line-through' : 'text-ink'}`}>
+                    {a.text}
+                  </p>
+                </div>
+                {canManageItem(a) && (
+                  <div className="flex gap-1 shrink-0 ml-2 mt-0.5">
+                    <button
+                      onClick={() => archiveMutation.mutate(a)}
+                      disabled={archiveMutation.isPending}
+                      title={isArchived ? 'Wiederherstellen' : 'Archivieren'}
+                      className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-canvas transition-colors disabled:opacity-40"
+                    >
+                      {isArchived ? (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2L19 8" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(a)}
+                      disabled={deleteMutation.isPending}
+                      title="Löschen"
+                      className="p-1.5 rounded-lg text-muted hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="text-ink text-[15px] leading-relaxed">{a.text}</p>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
