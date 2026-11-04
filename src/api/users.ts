@@ -8,7 +8,21 @@ type ApiUser = {
   group_id: string | null
   phone: string | null
   diocese_id: string | null
+  matrix_user_id: string | null
+  matrix_username: string | null
   blocked: number
+}
+
+export type CreateUserResult = {
+  uid: string
+  temp_password: string
+  matrix: null | {
+    created: boolean
+    user_id?: string
+    username: string
+    temp_password?: string
+    error?: string | null
+  }
 }
 
 export const fetchAllUsers = () =>
@@ -20,6 +34,8 @@ export const fetchAllUsers = () =>
       groupId: u.group_id,
       phone: u.phone,
       dioceseId: u.diocese_id,
+      matrixUserId: u.matrix_user_id ?? null,
+      matrixUsername: u.matrix_username ?? null,
       fcmToken: null,
       mustChangePassword: 0,
       blocked: u.blocked ?? 0,
@@ -40,8 +56,13 @@ export const updateUserDiocese = (uid: string, dioceseId: string | null) =>
 export const updateUserName = (uid: string, name: string) =>
   apiClient.put(`/v1/users/${uid}/name`, { name }).then(r => r.data)
 
-export const createUser = (name: string, email: string, role: string) =>
-  apiClient.post<{ uid: string; temp_password: string }>('/v1/users', { name, email, role }).then(r => r.data)
+export const createUser = (name: string, email: string, role: string, matrixUsername?: string) =>
+  apiClient.post<CreateUserResult>('/v1/users', {
+    name,
+    email,
+    role,
+    ...(matrixUsername ? { matrix_username: matrixUsername } : {}),
+  }).then(r => r.data)
 
 export const deleteUser = (uid: string): Promise<void> =>
   apiClient.delete(`/v1/users/${uid}`).then(() => undefined)

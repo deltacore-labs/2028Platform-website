@@ -345,7 +345,7 @@ export function LandingPage() {
               <address className="not-italic text-sm text-gray-500 leading-relaxed">
                 BDKJ & BJA im Bistum Mainz<br />
                 Am Fort Gonsenheim 54<br />
-                55112 Mainz
+                55122 Mainz
               </address>
             </div>
             <div>
@@ -358,9 +358,11 @@ export function LandingPage() {
           </div>
           <div className="border-t border-red-100 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-gray-400">
             <span>© 2025 BDKJ & BJA im Bistum Mainz. Alle Rechte vorbehalten.</span>
-            <Link to="/login" className="hover:text-gray-600 transition-colors">
-              Teambereich
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link to="/datenschutz" className="hover:text-gray-600 transition-colors">Datenschutz</Link>
+              <Link to="/impressum" className="hover:text-gray-600 transition-colors">Impressum</Link>
+              <Link to="/login" className="hover:text-gray-600 transition-colors">Teambereich</Link>
+            </div>
           </div>
         </div>
       </footer>

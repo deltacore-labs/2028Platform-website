@@ -10,6 +10,8 @@ import {
   deleteGroup,
 } from '../api/groups'
 import { useAuth } from '../context/AuthContext'
+import { fetchDioceses } from '../api/dioceses'
+import type { Group } from '../types'
 
 function formatDate(unix: number) {
   return new Date(unix * 1000).toLocaleDateString('de-DE', {
@@ -22,16 +24,23 @@ export function GroupsPage() {
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [newGroupName, setNewGroupName] = useState('')
+  const [newDioceseId, setNewDioceseId] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [editDioceseId, setEditDioceseId] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   const { appUser } = useAuth()
   const isPrivileged = appUser?.role === 'miniteam' || appUser?.role === 'admin'
+  const isAdmin = appUser?.role === 'admin'
 
   const { data: groups = [], isLoading } = useQuery({
     queryKey: ['groups'],
     queryFn: fetchGroups,
+  })
+  const { data: dioceses = [] } = useQuery({
+    queryKey: ['dioceses'],
+    queryFn: fetchDioceses,
   })
 
   const { data: members = [] } = useQuery({
@@ -57,15 +66,16 @@ export function GroupsPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: () => createGroup(newGroupName.trim()),
+    mutationFn: () => createGroup(newGroupName.trim(), isAdmin ? newDioceseId : undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       setNewGroupName('')
+      setNewDioceseId('')
     },
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => updateGroup(id, name),
+    mutationFn: ({ id, name, dioceseId }: { id: string; name: string; dioceseId?: string }) => updateGroup(id, name, dioceseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['groups'] })
       setEditingId(null)
@@ -84,12 +94,14 @@ export function GroupsPage() {
 
   const filtered = groups.filter(g =>
     g.name.toLowerCase().includes(search.toLowerCase()) ||
-    (g.leaderName ?? '').toLowerCase().includes(search.toLowerCase())
+    (g.leaderName ?? '').toLowerCase().includes(search.toLowerCase()) ||
+    (dioceses.find(d => d.id === g.dioceseId)?.name ?? '').toLowerCase().includes(search.toLowerCase())
   )
 
-  function startEdit(g: { id: string; name: string }) {
+  function startEdit(g: Group) {
     setEditingId(g.id)
     setEditName(g.name)
+    setEditDioceseId(g.dioceseId ?? '')
     setConfirmDeleteId(null)
     setExpandedGroupId(null)
   }
@@ -117,18 +129,29 @@ export function GroupsPage() {
               {(createMutation.error as Error).message}
             </div>
           )}
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <input
               type="text"
               placeholder="Gruppenname"
               value={newGroupName}
               onChange={e => setNewGroupName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && newGroupName.trim().length >= 2 && createMutation.mutate()}
+              onKeyDown={e => e.key === 'Enter' && newGroupName.trim().length >= 2 && (!isAdmin || newDioceseId) && createMutation.mutate()}
               className="flex-1 bg-surface text-ink rounded-lg px-4 py-3 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
             />
+            {isAdmin && (
+              <select
+                value={newDioceseId}
+                onChange={e => setNewDioceseId(e.target.value)}
+                className="min-w-[190px] bg-surface text-ink rounded-lg px-4 py-3 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink"
+                aria-label="Bistum für neue Gruppe"
+              >
+                <option value="">Bistum wählen…</option>
+                {dioceses.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            )}
             <button
               onClick={() => createMutation.mutate()}
-              disabled={newGroupName.trim().length < 2 || createMutation.isPending}
+              disabled={newGroupName.trim().length < 2 || (isAdmin && !newDioceseId) || createMutation.isPending}
               className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors shrink-0"
             >
               {createMutation.isPending ? 'Anlegen…' : 'Anlegen'}
@@ -166,16 +189,27 @@ export function GroupsPage() {
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter' && editName.trim().length >= 2)
-                      updateMutation.mutate({ id: g.id, name: editName.trim() })
+                    if (e.key === 'Enter' && editName.trim().length >= 2 && (!isAdmin || editDioceseId))
+                      updateMutation.mutate({ id: g.id, name: editName.trim(), dioceseId: editDioceseId || undefined })
                     if (e.key === 'Escape') setEditingId(null)
                   }}
                   autoFocus
                   className="flex-1 bg-canvas text-ink rounded-lg px-3 py-2 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink transition-colors"
                 />
+                {isAdmin && (
+                  <select
+                    value={editDioceseId}
+                    onChange={e => setEditDioceseId(e.target.value)}
+                    className="bg-canvas text-ink rounded-lg px-3 py-2 border border-hairline-strong text-[14px]"
+                    aria-label={`Bistum für ${g.name}`}
+                  >
+                    <option value="">Bistum wählen…</option>
+                    {dioceses.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                )}
                 <button
-                  onClick={() => updateMutation.mutate({ id: g.id, name: editName.trim() })}
-                  disabled={editName.trim().length < 2 || updateMutation.isPending}
+                  onClick={() => updateMutation.mutate({ id: g.id, name: editName.trim(), dioceseId: editDioceseId || undefined })}
+                  disabled={editName.trim().length < 2 || (isAdmin && !editDioceseId) || updateMutation.isPending}
                   className="text-[13px] bg-ink-warm hover:bg-ink disabled:opacity-40 text-white px-3 py-1.5 rounded-pill transition-colors font-medium"
                 >
                   {updateMutation.isPending ? '…' : 'Speichern'}
@@ -214,6 +248,9 @@ export function GroupsPage() {
                 >
                   <div>
                     <span className="text-ink font-medium text-[15px]">{g.name}</span>
+                    <span className="text-muted text-[13px] ml-2">
+                      · {dioceses.find(d => d.id === g.dioceseId)?.name ?? (g.dioceseId || 'Bistum fehlt')}
+                    </span>
                     {g.leaderName && (
                       <span className="text-muted text-[14px] ml-2">· {g.leaderName}</span>
                     )}

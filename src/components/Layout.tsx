@@ -10,6 +10,7 @@ const navItems = [
   { to: '/admin/emergency', label: 'Notfall', icon: '⚡', roles: ['miniteam', 'admin'] },
   { to: '/admin/announcements', label: 'Ankündigungen', icon: '◎', roles: ['miniteam', 'leader', 'admin'] },
   { to: '/admin/events', label: 'Veranstaltungen', icon: '◷', roles: ['miniteam', 'leader', 'admin'] },
+  { to: '/admin/locations', label: 'Orte', icon: '⌖', roles: ['miniteam', 'admin'] },
   { to: '/admin/users', label: 'Nutzer', icon: '◈', roles: ['miniteam', 'admin'] },
   { to: '/admin/groups', label: 'Gruppen', icon: '◉', roles: ['miniteam', 'admin'] },
   { to: '/admin/dioceses', label: 'Bistümer', icon: '◇', roles: ['admin'] },

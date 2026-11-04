@@ -4,11 +4,17 @@ import type { Group, GroupMember, JoinRequest } from '../types'
 export const fetchGroups = () =>
   apiClient.get<Group[]>('/v1/groups').then(r => r.data)
 
-export const createGroup = (name: string) =>
-  apiClient.post<{ id: string; name: string }>('/v1/groups', { name }).then(r => r.data)
+export const createGroup = (name: string, dioceseId?: string) =>
+  apiClient.post<{ id: string; name: string; dioceseId: string }>('/v1/groups', {
+    name,
+    ...(dioceseId ? { diocese_id: dioceseId } : {}),
+  }).then(r => r.data)
 
-export const updateGroup = (groupId: string, name: string) =>
-  apiClient.put<{ id: string; name: string }>(`/v1/groups/${groupId}`, { name }).then(r => r.data)
+export const updateGroup = (groupId: string, name: string, dioceseId?: string) =>
+  apiClient.put<{ id: string; name: string; dioceseId: string }>(`/v1/groups/${groupId}`, {
+    name,
+    ...(dioceseId ? { diocese_id: dioceseId } : {}),
+  }).then(r => r.data)
 
 export const deleteGroup = (groupId: string) =>
   apiClient.delete(`/v1/groups/${groupId}`).then(r => r.data)

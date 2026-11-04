@@ -22,6 +22,18 @@ const roleBadge: Record<UserRole, string> = {
 
 const NO_DIOCESE = '__none__'
 
+function suggestMatrixUsername(email: string, name: string): string {
+  const source = email.split('@')[0] || name
+  return source
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9._=-]+/g, '-')
+    .replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')
+    .slice(0, 64)
+}
+
 export function UsersPage() {
   const queryClient = useQueryClient()
   const { appUser } = useAuth()
@@ -30,7 +42,14 @@ export function UsersPage() {
   const [newName, setNewName] = useState('')
   const [newEmail, setNewEmail] = useState('')
   const [newRole, setNewRole] = useState<UserRole>('leader')
-  const [createResult, setCreateResult] = useState<{ name: string; tempPassword: string } | null>(null)
+  const [matrixUsername, setMatrixUsername] = useState('')
+  const [matrixUsernameTouched, setMatrixUsernameTouched] = useState(false)
+  const [createResult, setCreateResult] = useState<{
+    name: string
+    email: string
+    tempPassword: string
+    matrix: null | { created: boolean; userId?: string; username: string; tempPassword?: string; error?: string | null }
+  } | null>(null)
 
   const [search, setSearch] = useState('')
   const [filterRole, setFilterRole] = useState<UserRole | ''>('')
@@ -90,14 +109,27 @@ export function UsersPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: ({ name, email, role }: { name: string; email: string; role: UserRole }) =>
-      createUser(name, email, role),
+    mutationFn: ({ name, email, role, matrixUsername }: { name: string; email: string; role: UserRole; matrixUsername?: string }) =>
+      createUser(name, email, role, matrixUsername),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
-      setCreateResult({ name: newName, tempPassword: data.temp_password })
+      setCreateResult({
+        name: newName,
+        email: newEmail,
+        tempPassword: data.temp_password,
+        matrix: data.matrix ? {
+          created: data.matrix.created,
+          userId: data.matrix.user_id,
+          username: data.matrix.username,
+          tempPassword: data.matrix.temp_password,
+          error: data.matrix.error,
+        } : null,
+      })
       setNewName('')
       setNewEmail('')
       setNewRole('leader')
+      setMatrixUsername('')
+      setMatrixUsernameTouched(false)
     },
   })
 
@@ -178,14 +210,27 @@ export function UsersPage() {
         </p>
 
         {createResult && (
-          <div className="bg-[#f0faf4] border border-[#bbf7d0] rounded-xl p-4 mb-4">
-            <p className="font-medium text-[#16a34a] text-[14px] mb-1">
+          <div className={`border rounded-xl p-4 mb-4 ${createResult.matrix && !createResult.matrix.created ? 'bg-amber-50 border-amber-200' : 'bg-[#f0faf4] border-[#bbf7d0]'}`}>
+            <p className={`font-medium text-[14px] mb-1 ${createResult.matrix && !createResult.matrix.created ? 'text-amber-800' : 'text-[#16a34a]'}`}>
               Konto für {createResult.name} erstellt
             </p>
-            <p className="text-[#16a34a] text-[13px]">
-              Temporäres Passwort:{' '}
+            <p className="text-body text-[13px]">
+              App-Login: <span className="font-medium">{createResult.email}</span><br />
+              App-Passwort:{' '}
               <span className="font-mono font-bold">{createResult.tempPassword}</span>
             </p>
+            {createResult.matrix?.created && (
+              <p className="text-body text-[13px] mt-3 pt-3 border-t border-green-200">
+                Matrix-ID: <span className="font-mono font-medium">{createResult.matrix.userId}</span><br />
+                Matrix-Login: <span className="font-mono font-medium">{createResult.matrix.username}</span><br />
+                Matrix-Passwort: <span className="font-mono font-bold">{createResult.matrix.tempPassword}</span>
+              </p>
+            )}
+            {createResult.matrix && !createResult.matrix.created && (
+              <p className="text-amber-800 text-[13px] mt-3 pt-3 border-t border-amber-200">
+                Das App-Konto wurde erstellt, das Matrix-Konto „{createResult.matrix.username}“ jedoch nicht: {createResult.matrix.error ?? 'Unbekannter Fehler'}
+              </p>
+            )}
             <button
               onClick={() => setCreateResult(null)}
               className="mt-2 text-[13px] text-[#16a34a] hover:underline underline-offset-2"
@@ -218,7 +263,10 @@ export function UsersPage() {
               type="email"
               placeholder="name@bistum.de"
               value={newEmail}
-              onChange={e => setNewEmail(e.target.value)}
+              onChange={e => {
+                setNewEmail(e.target.value)
+                if (!matrixUsernameTouched) setMatrixUsername(suggestMatrixUsername(e.target.value, newName))
+              }}
               className={`w-full ${inputClass}`}
             />
           </div>
@@ -226,7 +274,13 @@ export function UsersPage() {
             <label className="block text-[12px] font-medium text-muted mb-1.5 tracking-[0.4px] uppercase">Rolle</label>
             <select
               value={newRole}
-              onChange={e => setNewRole(e.target.value as UserRole)}
+              onChange={e => {
+                const role = e.target.value as UserRole
+                setNewRole(role)
+                if (role === 'miniteam' && !matrixUsernameTouched) {
+                  setMatrixUsername(suggestMatrixUsername(newEmail, newName))
+                }
+              }}
               className={`bg-surface ${inputClass}`}
             >
               <option value="leader">Leiter</option>
@@ -235,9 +289,40 @@ export function UsersPage() {
               {isAdmin && <option value="admin">Admin</option>}
             </select>
           </div>
+          {newRole === 'miniteam' && (
+            <div className="w-full basis-full rounded-xl border border-[#d8d2c8] bg-canvas-soft p-4">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-[12px] font-medium text-muted mb-1.5 tracking-[0.4px] uppercase">
+                    Matrix-Nutzername
+                  </label>
+                  <div className="flex items-center">
+                    <span className="px-3 py-2.5 border border-r-0 border-hairline-strong rounded-l-lg bg-canvas text-muted text-[14px]">@</span>
+                    <input
+                      type="text"
+                      value={matrixUsername}
+                      onChange={e => { setMatrixUsername(e.target.value.toLowerCase()); setMatrixUsernameTouched(true) }}
+                      className={`w-full rounded-l-none ${inputClass}`}
+                      placeholder="vorname.nachname"
+                      pattern="[a-z0-9._=-]{3,64}"
+                    />
+                    <span className="hidden sm:block px-3 py-2.5 border border-l-0 border-hairline-strong rounded-r-lg bg-canvas text-muted text-[14px]">:matrix.deltacorelabs.de</span>
+                  </div>
+                </div>
+                <p className="text-[12px] leading-5 text-muted sm:max-w-[230px]">
+                  Das Matrix-Konto wird automatisch mit derselben E-Mail und einem eigenen temporären Passwort angelegt.
+                </p>
+              </div>
+            </div>
+          )}
           <button
-            onClick={() => createMutation.mutate({ name: newName.trim(), email: newEmail.trim(), role: newRole })}
-            disabled={newName.trim().length < 2 || !newEmail.includes('@') || createMutation.isPending}
+            onClick={() => createMutation.mutate({
+              name: newName.trim(),
+              email: newEmail.trim(),
+              role: newRole,
+              matrixUsername: newRole === 'miniteam' ? matrixUsername : undefined,
+            })}
+            disabled={newName.trim().length < 2 || !newEmail.includes('@') || (newRole === 'miniteam' && !/^[a-z0-9._=-]{3,64}$/.test(matrixUsername)) || createMutation.isPending}
             className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors"
           >
             {createMutation.isPending ? 'Anlegen…' : 'Anlegen'}

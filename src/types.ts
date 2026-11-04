@@ -12,6 +12,8 @@ export interface AppUser {
   groupId: string | null
   phone: string | null
   dioceseId: string | null
+  matrixUserId: string | null
+  matrixUsername: string | null
   fcmToken: string | null
   mustChangePassword: number
   blocked: number
@@ -22,9 +24,20 @@ export interface AppUser {
 export interface Group {
   id: string
   name: string
+  dioceseId: string | null
   leaderId: string | null
   leaderName: string | null
   leaderPhone: string | null
+}
+
+export interface AppLocation {
+  id: string
+  name: string
+  type: LocationType
+  lat: number
+  lng: number
+  description: string | null
+  offlineExport: number
 }
 
 export interface GroupMember {

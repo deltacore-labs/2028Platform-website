@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchEvents, createEvent } from '../api/events'
+import { fetchEvents, createEvent, updateEvent, deleteEvent } from '../api/events'
 import { fetchGroups } from '../api/groups'
+import { fetchLocations } from '../api/locations'
+import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../types'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -31,15 +33,24 @@ function defaultDatetime(offsetDays = 0) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+function toLocalDatetime(unix: number) {
+  const date = new Date(unix * 1000)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 export function EventsPage() {
   const queryClient = useQueryClient()
+  const { appUser } = useAuth()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [startDate, setStartDate] = useState(defaultDatetime())
   const [endDate, setEndDate] = useState(defaultDatetime(1))
   const [targetRoles, setTargetRoles] = useState<UserRole[]>([])
   const [targetGroupId, setTargetGroupId] = useState('')
+  const [locationId, setLocationId] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const [search, setSearch] = useState('')
   const [filterRole, setFilterRole] = useState('')
@@ -54,17 +65,24 @@ export function EventsPage() {
     queryKey: ['groups'],
     queryFn: fetchGroups,
   })
+  const { data: locations = [] } = useQuery({
+    queryKey: ['locations'],
+    queryFn: fetchLocations,
+  })
 
   const createMutation = useMutation({
-    mutationFn: () =>
-      createEvent({
+    mutationFn: () => {
+      const payload = {
         title: title.trim(),
         description: description.trim() || undefined,
         start_date: toUnix(startDate),
         end_date: toUnix(endDate),
         target_roles: targetRoles.length > 0 ? targetRoles : undefined,
         group_id: targetGroupId || undefined,
-      }),
+        location_id: locationId || undefined,
+      }
+      return editingId ? updateEvent(editingId, payload) : createEvent(payload)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] })
       setTitle('')
@@ -73,9 +91,45 @@ export function EventsPage() {
       setEndDate(defaultDatetime(1))
       setTargetRoles([])
       setTargetGroupId('')
+      setLocationId('')
       setShowForm(false)
+      setEditingId(null)
     },
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteEvent(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
+  })
+
+  function closeForm() {
+    setShowForm(false)
+    setEditingId(null)
+    setTitle('')
+    setDescription('')
+    setStartDate(defaultDatetime())
+    setEndDate(defaultDatetime(1))
+    setTargetRoles([])
+    setTargetGroupId('')
+    setLocationId('')
+  }
+
+  function startEdit(event: typeof events[number]) {
+    setEditingId(event.id)
+    setTitle(event.title)
+    setDescription(event.description)
+    setStartDate(toLocalDatetime(event.startDate))
+    setEndDate(toLocalDatetime(event.endDate))
+    try { setTargetRoles(JSON.parse(event.targetRoles)) } catch { setTargetRoles([]) }
+    setTargetGroupId(event.groupId ?? '')
+    setLocationId(event.locationId ?? '')
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function removeEvent(id: string, eventTitle: string) {
+    if (confirm(`Veranstaltung „${eventTitle}“ wirklich löschen?`)) deleteMutation.mutate(id)
+  }
 
   function toggleRole(role: UserRole) {
     setTargetRoles(prev =>
@@ -112,7 +166,7 @@ export function EventsPage() {
           </p>
         </div>
         <button
-          onClick={() => setShowForm(v => !v)}
+          onClick={() => showForm ? closeForm() : setShowForm(true)}
           className={`px-5 py-2.5 rounded-pill text-[15px] font-medium transition-colors ${
             showForm
               ? 'bg-surface border border-hairline-strong text-ink hover:bg-canvas'
@@ -127,7 +181,7 @@ export function EventsPage() {
       {showForm && (
         <div className="bg-surface border border-hairline rounded-xl p-6 mb-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] space-y-4">
           <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">
-            Neue Veranstaltung
+            {editingId ? 'Veranstaltung bearbeiten' : 'Neue Veranstaltung'}
           </p>
 
           {createMutation.error && (
@@ -194,6 +248,23 @@ export function EventsPage() {
 
           <div>
             <label className="block text-[13px] font-medium text-body mb-1.5">
+              Ort <span className="text-muted font-normal">(optional)</span>
+            </label>
+            <select
+              value={locationId}
+              onChange={e => setLocationId(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Kein Ort</option>
+              {locations.map(location => (
+                <option key={location.id} value={location.id}>{location.name}</option>
+              ))}
+            </select>
+            <p className="text-[12px] text-muted mt-1.5">Der Ort wird in der App beim Öffnen der Veranstaltung auf einer Karte angezeigt.</p>
+          </div>
+
+          <div>
+            <label className="block text-[13px] font-medium text-body mb-1.5">
               Gruppe <span className="text-muted font-normal">(optional)</span>
             </label>
             <select
@@ -213,7 +284,7 @@ export function EventsPage() {
             disabled={title.trim().length < 2 || !startDate || !endDate || createMutation.isPending}
             className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors"
           >
-            {createMutation.isPending ? 'Speichern…' : 'Speichern'}
+            {createMutation.isPending ? 'Speichern…' : editingId ? 'Änderungen speichern' : 'Speichern'}
           </button>
         </div>
       )}
@@ -298,6 +369,28 @@ export function EventsPage() {
                     <span className="text-[13px] text-muted">
                       {groups.find(g => g.id === ev.groupId)?.name ?? ev.groupId}
                     </span>
+                  )}
+                  {ev.locationId && (
+                    <span className="text-[13px] text-muted">
+                      📍 {locations.find(location => location.id === ev.locationId)?.name ?? 'Ort'}
+                    </span>
+                  )}
+                  {(appUser?.role === 'admin' || ev.createdBy === appUser?.uid) && (
+                    <div className="flex gap-1 mt-1">
+                      <button
+                        onClick={() => startEdit(ev)}
+                        className="text-[13px] text-muted hover:text-ink px-2.5 py-1.5 rounded-lg hover:bg-canvas"
+                      >
+                        Bearbeiten
+                      </button>
+                      <button
+                        onClick={() => removeEvent(ev.id, ev.title)}
+                        disabled={deleteMutation.isPending}
+                        className="text-[13px] text-muted hover:text-[#dc2626] px-2.5 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-50"
+                      >
+                        Löschen
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
