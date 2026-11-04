@@ -1,121 +1,17 @@
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { fetchAllUsers } from '../api/users'
-import { fetchGroups } from '../api/groups'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchAllUsers, updateUserAssignment } from '../api/users'
+import { fetchGroups, updateGroup } from '../api/groups'
 import { fetchDioceses } from '../api/dioceses'
 import { fetchEmergencyReports } from '../api/emergency'
-import type { AppUser, Group, Diocese } from '../types'
-
-const NW = 184
-const NH = 78
-const ROW_GAP = 140
-const COL_GAP = 14
-const DIO_GAP = 32
-const PAD = 48
-
-interface TNode {
-  id: string
-  type: 'root' | 'diocese' | 'group'
-  label: string
-  sub: string
-  sub2?: string
-  count: number
-  x: number
-  y: number
-  parentId: string | null
-}
-
-function buildLayout(
-  users: AppUser[],
-  groups: Group[],
-  dioceses: Diocese[],
-  usersByDiocese: Map<string | null, number>,
-  usersByGroup: Map<string | null, number>,
-  userByUid: Map<string, AppUser>,
-): { nodes: TNode[]; totalW: number; totalH: number } {
-  const groupDioId = (g: Group): string | null => {
-    if (!g.leaderId) return null
-    return userByUid.get(g.leaderId)?.dioceseId ?? null
-  }
-
-  const groupsByDio = new Map<string | null, Group[]>()
-  for (const g of groups) {
-    const dId = groupDioId(g)
-    if (!groupsByDio.has(dId)) groupsByDio.set(dId, [])
-    groupsByDio.get(dId)!.push(g)
-  }
-
-  const hasOrphan = groupsByDio.has(null) || (usersByDiocese.has(null) && (usersByDiocese.get(null) ?? 0) > 0)
-  const dioEntries: { id: string | null; name: string }[] = [
-    ...dioceses,
-    ...(hasOrphan ? [{ id: null as null, name: 'Kein Bistum' }] : []),
-  ]
-
-  const nodes: TNode[] = []
-  let curX = PAD
-  const dioCenterXs: number[] = []
-
-  for (const d of dioEntries) {
-    const dGroups = groupsByDio.get(d.id) ?? []
-    const slots = Math.max(1, dGroups.length)
-    const colW = slots * NW + (slots - 1) * COL_GAP
-    const dioCX = curX + colW / 2
-    dioCenterXs.push(dioCX)
-
-    const dCount = usersByDiocese.get(d.id) ?? 0
-    nodes.push({
-      id: d.id ?? '__none__',
-      type: 'diocese',
-      label: d.name,
-      sub: `${dCount} ${dCount === 1 ? 'Person' : 'Personen'}`,
-      count: dCount,
-      x: dioCX - NW / 2,
-      y: PAD + ROW_GAP,
-      parentId: 'root',
-    })
-
-    for (let i = 0; i < dGroups.length; i++) {
-      const g = dGroups[i]
-      const mCount = usersByGroup.get(g.id) ?? 0
-      nodes.push({
-        id: g.id,
-        type: 'group',
-        label: g.name,
-        sub: `${mCount} ${mCount === 1 ? 'Mitglied' : 'Mitglieder'}`,
-        sub2: g.leaderName ? `Leiter: ${g.leaderName}` : 'Kein Leiter',
-        count: mCount,
-        x: curX + i * (NW + COL_GAP),
-        y: PAD + 2 * ROW_GAP,
-        parentId: d.id ?? '__none__',
-      })
-    }
-
-    curX += colW + DIO_GAP
-  }
-
-  const allCX = dioCenterXs.length > 0 ? dioCenterXs : [PAD + NW / 2]
-  const rootCX = (Math.min(...allCX) + Math.max(...allCX)) / 2
-  const total = users.length
-
-  nodes.unshift({
-    id: 'root',
-    type: 'root',
-    label: 'Rom 2028 Pilgerfahrt',
-    sub: `${total} ${total === 1 ? 'Person' : 'Personen'} gesamt`,
-    count: total,
-    x: rootCX - NW / 2,
-    y: PAD,
-    parentId: null,
-  })
-
-  const hasGroups = groups.length > 0
-  const totalW = Math.max(curX - DIO_GAP + PAD, NW + PAD * 2)
-  const totalH = PAD + (hasGroups ? 3 : 2) * ROW_GAP + NH + PAD
-
-  return { nodes, totalW, totalH }
-}
+import { useAuth } from '../context/AuthContext'
+import { OrganizationTree, type OrganizationMove } from '../components/OrganizationTree'
+import type { AppUser, Group } from '../types'
 
 export function OverviewPage() {
+  const queryClient = useQueryClient()
+  const { appUser } = useAuth()
+  const [moveMessage, setMoveMessage] = useState<string | null>(null)
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['users'],
     queryFn: fetchAllUsers,
@@ -164,12 +60,78 @@ export function OverviewPage() {
   const withoutDiocese = users.filter(u => !u.dioceseId).length
   const withoutPhone = users.filter(u => !u.phone).length
 
-  const { nodes, totalW, totalH } = useMemo(
-    () => buildLayout(users, groups, dioceses, usersByDiocese, usersByGroup, userByUid),
-    [users, groups, dioceses, usersByDiocese, usersByGroup, userByUid],
-  )
+  const moveMutation = useMutation({
+    mutationFn: async (move: OrganizationMove) => {
+      if (move.type === 'group') {
+        const group = groups.find(candidate => candidate.id === move.groupId)
+        if (!group) throw new Error('Gruppe wurde nicht gefunden.')
+        await updateGroup(group.id, group.name, move.dioceseId)
+        return
+      }
+      await updateUserAssignment(move.uid, move.type === 'person-to-group'
+        ? { kind: 'group', groupId: move.groupId }
+        : { kind: 'miniteam', dioceseId: move.dioceseId })
+    },
+    onMutate: async move => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ['users'] }),
+        queryClient.cancelQueries({ queryKey: ['groups'] }),
+      ])
+      const previousUsers = queryClient.getQueryData<AppUser[]>(['users'])
+      const previousGroups = queryClient.getQueryData<Group[]>(['groups'])
 
-  const nodeMap = useMemo(() => new Map(nodes.map(n => [n.id, n])), [nodes])
+      if (move.type === 'group') {
+        queryClient.setQueryData<Group[]>(['groups'], current => current?.map(group =>
+          group.id === move.groupId ? { ...group, dioceseId: move.dioceseId } : group,
+        ))
+        queryClient.setQueryData<AppUser[]>(['users'], current => current?.map(user =>
+          user.groupId === move.groupId ? { ...user, dioceseId: move.dioceseId } : user,
+        ))
+      } else if (move.type === 'person-to-group') {
+        queryClient.setQueryData<AppUser[]>(['users'], current => current?.map(user =>
+          user.uid === move.uid
+            ? {
+                ...user,
+                groupId: move.groupId,
+                dioceseId: move.dioceseId,
+                role: user.role === 'miniteam' ? 'participant' : user.role,
+              }
+            : user,
+        ))
+      } else {
+        queryClient.setQueryData<AppUser[]>(['users'], current => current?.map(user =>
+          user.uid === move.uid
+            ? { ...user, groupId: null, dioceseId: move.dioceseId, role: 'miniteam' }
+            : user,
+        ))
+      }
+
+      return { previousUsers, previousGroups }
+    },
+    onSuccess: async (_, move) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['users'] }),
+        queryClient.invalidateQueries({ queryKey: ['groups'] }),
+      ])
+      const person = 'uid' in move ? users.find(user => user.uid === move.uid) : null
+      const group = move.type === 'group'
+        ? groups.find(candidate => candidate.id === move.groupId)
+        : move.type === 'person-to-group'
+          ? groups.find(candidate => candidate.id === move.groupId)
+          : null
+      const diocese = dioceses.find(candidate => candidate.id === move.dioceseId)
+      setMoveMessage(move.type === 'group'
+        ? `${group?.name ?? 'Gruppe'} wurde nach ${diocese?.name ?? 'Bistum'} verschoben. Alle Mitglieder wurden mit umgetragen.`
+        : move.type === 'person-to-group'
+          ? `${person?.name ?? 'Person'} gehört jetzt zu ${group?.name ?? 'der Gruppe'} in ${diocese?.name ?? 'dem Bistum'}.`
+          : `${person?.name ?? 'Person'} gehört jetzt zum Mini-Team von ${diocese?.name ?? 'dem Bistum'}.`)
+    },
+    onError: (error, _move, context) => {
+      if (context?.previousUsers) queryClient.setQueryData(['users'], context.previousUsers)
+      if (context?.previousGroups) queryClient.setQueryData(['groups'], context.previousGroups)
+      setMoveMessage(error instanceof Error ? error.message : 'Verschieben fehlgeschlagen.')
+    },
+  })
 
   const kpis = [
     { label: 'Personen', value: totalUsers },
@@ -283,104 +245,35 @@ export function OverviewPage() {
           Struktur
         </p>
         <p className="text-[12px] text-muted-soft mb-4">
-          Bistümer → Gruppen · Verbindungen zeigen Zugehörigkeit des Gruppenleiters
+          Bistümer → Gruppen / Mini-Teams → Personen
         </p>
+        {(appUser?.role === 'admin' || appUser?.role === 'miniteam') && (
+          <p className="text-[12px] text-body mb-4">
+            Ziehe Gruppen am Griff auf ein Bistum. Personen kannst du auf eine Gruppe oder das Mini-Team eines Bistums ziehen.
+          </p>
+        )}
+        {moveMessage && (
+          <div
+            role="status"
+            className={`mb-4 rounded-lg border px-3 py-2 text-[12px] ${moveMutation.isError ? 'border-red-200 bg-red-50 text-[#dc2626]' : 'border-[#bbf7d0] bg-[#f0faf4] text-[#166534]'}`}
+          >
+            {moveMessage}
+          </div>
+        )}
         {totalUsers === 0 ? (
           <p className="text-muted text-[14px] py-4">Noch keine Personen eingetragen.</p>
         ) : (
-          <div className="overflow-x-auto -mx-1 px-1">
-            <div className="relative" style={{ width: totalW, height: totalH, minWidth: NW + PAD * 2 }}>
-              {/* SVG edge layer */}
-              <svg
-                className="absolute inset-0 pointer-events-none"
-                width={totalW}
-                height={totalH}
-              >
-                <defs>
-                  <marker
-                    id="arrow"
-                    markerWidth="6"
-                    markerHeight="6"
-                    refX="5"
-                    refY="3"
-                    orient="auto"
-                  >
-                    <path d="M0,0 L0,6 L6,3 z" fill="#d6d3d1" />
-                  </marker>
-                </defs>
-                {nodes
-                  .filter(n => n.parentId)
-                  .map(n => {
-                    const parent = nodeMap.get(n.parentId!)
-                    if (!parent) return null
-                    const x1 = parent.x + NW / 2
-                    const y1 = parent.y + NH
-                    const x2 = n.x + NW / 2
-                    const y2 = n.y
-                    const cy = (y1 + y2) / 2
-                    return (
-                      <path
-                        key={`edge-${n.id}`}
-                        d={`M ${x1} ${y1} C ${x1} ${cy} ${x2} ${cy} ${x2} ${y2}`}
-                        fill="none"
-                        stroke="#d6d3d1"
-                        strokeWidth="1.5"
-                        markerEnd="url(#arrow)"
-                      />
-                    )
-                  })}
-              </svg>
-
-              {/* Node cards */}
-              {nodes.map(n => (
-                <div
-                  key={n.id}
-                  className={`absolute rounded-xl border flex flex-col justify-center px-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] ${
-                    n.type === 'root'
-                      ? 'bg-canvas-deep border-canvas-deep'
-                      : n.type === 'diocese'
-                      ? 'bg-surface border-hairline-strong'
-                      : 'bg-surface border-hairline'
-                  }`}
-                  style={{ left: n.x, top: n.y, width: NW, height: NH }}
-                >
-                  {n.type === 'root' && (
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-white/50 text-[10px]">✞</span>
-                    </div>
-                  )}
-                  <p
-                    className={`text-[13px] font-medium leading-tight truncate ${
-                      n.type === 'root' ? 'text-white' : 'text-ink'
-                    }`}
-                  >
-                    {n.label}
-                  </p>
-                  <p
-                    className={`text-[11px] mt-0.5 truncate ${
-                      n.type === 'root' ? 'text-white/50' : 'text-muted'
-                    }`}
-                  >
-                    {n.sub}
-                  </p>
-                  {n.sub2 && (
-                    <p className="text-[11px] text-muted-soft truncate mt-0.5">{n.sub2}</p>
-                  )}
-                  {n.type !== 'root' && n.count > 0 && (
-                    <div
-                      className={`absolute top-2.5 right-2.5 text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-pill ${
-                        n.type === 'diocese'
-                          ? 'bg-canvas text-muted'
-                          : 'bg-canvas text-muted'
-                      }`}
-                    >
-                      {n.count}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          <OrganizationTree
+            users={users}
+            groups={groups}
+            dioceses={dioceses}
+            canEdit={appUser?.role === 'admin' || appUser?.role === 'miniteam'}
+            isMoving={moveMutation.isPending}
+            onMove={move => {
+              setMoveMessage(null)
+              moveMutation.mutate(move)
+            }}
+          />
         )}
       </div>
 
@@ -405,10 +298,7 @@ export function OverviewPage() {
               {dioceses.map(d => {
                 const dUsers = users.filter(u => u.dioceseId === d.id)
                 const dLeaders = dUsers.filter(u => u.role === 'leader').length
-                const dGroups = groups.filter(g => {
-                  const leader = g.leaderId ? userByUid.get(g.leaderId) : null
-                  return leader?.dioceseId === d.id
-                }).length
+                const dGroups = groups.filter(g => g.dioceseId === d.id).length
                 return (
                   <tr key={d.id} className="hover:bg-canvas transition-colors">
                     <td className="px-5 py-3 font-medium text-ink">{d.name}</td>
