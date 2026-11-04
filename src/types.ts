@@ -96,4 +96,5 @@ export interface JoinRequest {
 export interface Diocese {
   id: string
   name: string
+  sortOrder?: number
 }

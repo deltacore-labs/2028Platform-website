@@ -12,3 +12,6 @@ export const updateDiocese = (id: string, name: string) =>
 
 export const deleteDiocese = (id: string) =>
   apiClient.delete(`/v1/dioceses/${id}`).then(r => r.data)
+
+export const reorderDioceses = (order: { id: string; sortOrder: number }[]) =>
+  apiClient.patch('/v1/dioceses/order', { order }).then(r => r.data)

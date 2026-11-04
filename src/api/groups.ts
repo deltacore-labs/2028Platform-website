@@ -10,10 +10,10 @@ export const createGroup = (name: string, dioceseId?: string) =>
     ...(dioceseId ? { diocese_id: dioceseId } : {}),
   }).then(r => r.data)
 
-export const updateGroup = (groupId: string, name: string, dioceseId?: string) =>
-  apiClient.put<{ id: string; name: string; dioceseId: string }>(`/v1/groups/${groupId}`, {
+export const updateGroup = (groupId: string, name: string, dioceseId?: string | null) =>
+  apiClient.put<{ id: string; name: string; dioceseId: string | null }>(`/v1/groups/${groupId}`, {
     name,
-    ...(dioceseId ? { diocese_id: dioceseId } : {}),
+    ...(dioceseId !== undefined ? { diocese_id: dioceseId } : {}),
   }).then(r => r.data)
 
 export const deleteGroup = (groupId: string) =>
