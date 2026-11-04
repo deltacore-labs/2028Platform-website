@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -403,9 +403,12 @@ export function StrukturPage() {
 
   const [localOrder, setLocalOrder] = useState<string[] | null>(null)
 
-  const sortedDioceses: Diocese[] = localOrder
-    ? localOrder.map(id => diocesesRaw.find(d => d.id === id)!).filter(Boolean)
-    : [...diocesesRaw].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+  const sortedDioceses = useMemo<Diocese[]>(() =>
+    localOrder
+      ? localOrder.flatMap(id => { const d = diocesesRaw.find(d2 => d2.id === id); return d ? [d] : [] })
+      : [...diocesesRaw].sort((a, b) => a.sortOrder - b.sortOrder),
+    [diocesesRaw, localOrder]
+  )
 
   const reorderMutation = useMutation({
     mutationFn: (order: { id: string; sortOrder: number }[]) => reorderDioceses(order),
@@ -413,6 +416,7 @@ export function StrukturPage() {
       queryClient.invalidateQueries({ queryKey: ['dioceses'] })
       setLocalOrder(null)
     },
+    onError: () => setLocalOrder(null),
   })
 
   const moveDioceseMutation = useMutation({
@@ -458,7 +462,7 @@ export function StrukturPage() {
   }
 
   const unassignedGroups = groups.filter(g => !g.dioceseId)
-  const unassignedUsers = users.filter(u => !u.dioceseId)
+  const unassignedUsers = users.filter(u => !u.dioceseId && u.role !== 'admin')
 
   if (isLoading) {
     return <p className="p-8 text-muted text-[15px]">Lade…</p>
