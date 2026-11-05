@@ -108,3 +108,21 @@ export interface Diocese {
   name: string
   sortOrder: number
 }
+
+export interface AuditLogEntry {
+  id: string
+  actorUid: string | null
+  actorName: string
+  actorRole: string
+  action: string
+  entityType: string
+  entityId: string | null
+  summary: string
+  details: Record<string, unknown>
+  createdAt: number
+}
+
+export interface AuditLogPage {
+  entries: AuditLogEntry[]
+  nextCursor: string | null
+}

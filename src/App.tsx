@@ -15,6 +15,7 @@ const GroupsPage = lazy(() => import('./pages/GroupsPage').then(m => ({ default:
 const EventsPage = lazy(() => import('./pages/EventsPage').then(m => ({ default: m.EventsPage })))
 const OverviewPage = lazy(() => import('./pages/OverviewPage').then(m => ({ default: m.OverviewPage })))
 const LegalPage = lazy(() => import('./pages/LegalPage').then(m => ({ default: m.LegalPage })))
+const AuditLogPage = lazy(() => import('./pages/AuditLogPage').then(m => ({ default: m.AuditLogPage })))
 
 const queryClient = new QueryClient()
 
@@ -98,6 +99,14 @@ export default function App() {
                 }
               />
               <Route path="dioceses" element={<Navigate to="/admin/overview" replace />} />
+              <Route
+                path="activity"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AuditLogPage />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

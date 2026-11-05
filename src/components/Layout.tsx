@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { EmergencyAlert } from './EmergencyAlert'
 import { ForcePasswordChange } from './ForcePasswordChange'
 
-type IconName = 'overview' | 'emergency' | 'announcements' | 'events' | 'locations' | 'users' | 'groups'
+type IconName = 'overview' | 'emergency' | 'announcements' | 'events' | 'locations' | 'users' | 'groups' | 'activity'
 
 const navSections = [
   {
@@ -30,6 +30,12 @@ const navSections = [
     items: [
       { to: '/admin/users', label: 'Nutzer', icon: 'users', roles: ['miniteam', 'admin'] },
       { to: '/admin/groups', label: 'Gruppen', icon: 'groups', roles: ['miniteam', 'admin'] },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { to: '/admin/activity', label: 'Aktivitätsprotokoll', icon: 'activity', roles: ['admin'] },
     ],
   },
 ] as const
@@ -86,6 +92,13 @@ function Icon({ name, className = 'h-[18px] w-[18px]' }: { name: IconName; class
         <path d="M3.5 20v-1.5A4.5 4.5 0 0 1 8 14h2a4.5 4.5 0 0 1 4.5 4.5V20" />
         <circle cx="17.5" cy="7.5" r="2.5" />
         <path d="M16 13h1.5a4 4 0 0 1 4 4v1" />
+      </>
+    ),
+    activity: (
+      <>
+        <path d="M9 4h6M9 8h6M9 12h3" />
+        <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" />
+        <path d="m14.5 16 1.5 1.5 3-3" />
       </>
     ),
   }
