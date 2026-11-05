@@ -1,17 +1,38 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchAllUsers, updateUserAssignment } from '../api/users'
-import { fetchGroups, setGroupLeaderRole, setPrimaryGroupLeader, updateGroup } from '../api/groups'
-import { fetchDioceses } from '../api/dioceses'
+import { createGroup, fetchGroups, setGroupLeaderRole, setPrimaryGroupLeader, updateGroup } from '../api/groups'
+import { createDiocese, fetchDioceses } from '../api/dioceses'
 import { fetchEmergencyReports } from '../api/emergency'
 import { useAuth } from '../context/AuthContext'
 import { OrganizationTree, type OrganizationMove } from '../components/OrganizationTree'
 import type { AppUser, Group } from '../types'
 
+const roleName: Record<AppUser['role'], string> = {
+  participant: 'Teilnehmer',
+  leader: 'Leiter',
+  miniteam: 'Mini-Team',
+  admin: 'Admin',
+}
+
+function dioceseIdFromName(name: string) {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
 export function OverviewPage() {
   const queryClient = useQueryClient()
   const { appUser } = useAuth()
   const [moveMessage, setMoveMessage] = useState<string | null>(null)
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
+  const [newGroupDioceseId, setNewGroupDioceseId] = useState<string | null>(null)
+  const [newGroupName, setNewGroupName] = useState('')
+  const [showCreateDiocese, setShowCreateDiocese] = useState(false)
+  const [newDioceseName, setNewDioceseName] = useState('')
   const { data: users = [], isLoading: loadingUsers } = useQuery({
     queryKey: ['users'],
     queryFn: fetchAllUsers,
@@ -63,6 +84,15 @@ export function OverviewPage() {
     () => visibleUsers.filter(user => user.role !== 'admin'),
     [visibleUsers],
   )
+  const selectedPerson = selectedPersonId
+    ? visibleUsers.find(user => user.uid === selectedPersonId) ?? null
+    : null
+  const selectedPersonGroup = selectedPerson?.groupId
+    ? visibleGroups.find(group => group.id === selectedPerson.groupId) ?? null
+    : null
+  const selectedPersonDiocese = selectedPerson?.dioceseId
+    ? visibleDioceses.find(diocese => diocese.id === selectedPerson.dioceseId) ?? null
+    : null
   const visibleReports = useMemo(
     () => isMiniteam ? reports.filter(report => report.dioceseId === appUser.dioceseId) : reports,
     [appUser?.dioceseId, isMiniteam, reports],
@@ -250,6 +280,27 @@ export function OverviewPage() {
     },
   })
 
+  const createGroupMutation = useMutation({
+    mutationFn: ({ name, dioceseId }: { name: string; dioceseId: string }) =>
+      createGroup(name, dioceseId),
+    onSuccess: async created => {
+      await queryClient.invalidateQueries({ queryKey: ['groups'] })
+      setMoveMessage(`${created.name} wurde angelegt.`)
+      setNewGroupName('')
+      setNewGroupDioceseId(null)
+    },
+  })
+
+  const createDioceseMutation = useMutation({
+    mutationFn: (name: string) => createDiocese(dioceseIdFromName(name), name),
+    onSuccess: async created => {
+      await queryClient.invalidateQueries({ queryKey: ['dioceses'] })
+      setMoveMessage(`${created.name} wurde angelegt.`)
+      setNewDioceseName('')
+      setShowCreateDiocese(false)
+    },
+  })
+
   const kpis = isLeader ? [
     { label: 'Personen', value: totalUsers },
     { label: 'Teilnehmer', value: participants },
@@ -389,18 +440,30 @@ export function OverviewPage() {
           <p className="text-[12px] text-body mb-4">
             Ziehe Gruppen am Griff auf ein Bistum und Personen auf eine Gruppe oder das Mini-Team.
             Mit L+ weist du die Leiterrolle zu; der Stern markiert den Hauptansprechpartner.
+            Über + legst du Gruppen und als Admin auch Bistümer direkt im Baum an.
           </p>
         )}
         {moveMessage && (
           <div
             role="status"
-            className={`mb-4 rounded-lg border px-3 py-2 text-[12px] ${moveMutation.isError || primaryLeaderMutation.isError || leaderRoleMutation.isError ? 'border-red-200 bg-red-50 text-[#dc2626]' : 'border-[#bbf7d0] bg-[#f0faf4] text-[#166534]'}`}
+            className={`mb-4 rounded-lg border px-3 py-2 text-[12px] ${moveMutation.isError || primaryLeaderMutation.isError || leaderRoleMutation.isError || createGroupMutation.isError || createDioceseMutation.isError ? 'border-red-200 bg-red-50 text-[#dc2626]' : 'border-[#bbf7d0] bg-[#f0faf4] text-[#166534]'}`}
           >
             {moveMessage}
           </div>
         )}
-        {totalUsers === 0 ? (
-          <p className="text-muted text-[14px] py-4">Noch keine Personen eingetragen.</p>
+        {visibleDioceses.length === 0 && !isLeader ? (
+          <div className="py-4">
+            <p className="text-muted text-[14px]">Noch kein Bistum eingetragen.</p>
+            {appUser?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => setShowCreateDiocese(true)}
+                className="mt-3 rounded-pill bg-ink-warm px-4 py-2 text-[13px] font-medium text-white hover:bg-ink"
+              >
+                Erstes Bistum anlegen
+              </button>
+            )}
+          </div>
         ) : (
           <OrganizationTree
             users={organizationUsers}
@@ -412,7 +475,9 @@ export function OverviewPage() {
             canEdit={appUser?.role === 'admin' || appUser?.role === 'miniteam'}
             canSetPrimaryLeader={appUser?.role === 'admin' || appUser?.role === 'miniteam' || isLeader}
             canManageLeaders={appUser?.role === 'admin' || appUser?.role === 'miniteam'}
-            isMoving={moveMutation.isPending || primaryLeaderMutation.isPending || leaderRoleMutation.isPending}
+            canCreateGroups={appUser?.role === 'admin' || appUser?.role === 'miniteam'}
+            canCreateDioceses={appUser?.role === 'admin'}
+            isMoving={moveMutation.isPending || primaryLeaderMutation.isPending || leaderRoleMutation.isPending || createGroupMutation.isPending || createDioceseMutation.isPending}
             onMove={move => {
               setMoveMessage(null)
               moveMutation.mutate(move)
@@ -425,6 +490,17 @@ export function OverviewPage() {
               setMoveMessage(null)
               leaderRoleMutation.mutate({ groupId, userId, assign })
             }}
+            onCreateGroup={dioceseId => {
+              setMoveMessage(null)
+              setNewGroupName('')
+              setNewGroupDioceseId(dioceseId)
+            }}
+            onCreateDiocese={() => {
+              setMoveMessage(null)
+              setNewDioceseName('')
+              setShowCreateDiocese(true)
+            }}
+            onSelectPerson={setSelectedPersonId}
           />
         )}
       </div>
@@ -502,6 +578,154 @@ export function OverviewPage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {selectedPerson && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4"
+          role="presentation"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) setSelectedPersonId(null)
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="person-detail-title"
+            className="w-full max-w-md rounded-2xl border border-hairline bg-surface p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.8px] text-muted">Person</p>
+                <h3 id="person-detail-title" className="mt-1 font-display text-[28px] text-ink">
+                  {selectedPerson.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPersonId(null)}
+                className="grid h-9 w-9 place-items-center rounded-lg text-[20px] text-muted hover:bg-canvas hover:text-ink"
+                aria-label="Personendetails schließen"
+              >
+                ×
+              </button>
+            </div>
+            <dl className="mt-5 divide-y divide-hairline text-[14px]">
+              {[
+                ['Rolle', roleName[selectedPerson.role]],
+                ['Gruppe', selectedPersonGroup?.name ?? (selectedPerson.role === 'miniteam' ? 'Mini-Team' : 'Nicht zugeordnet')],
+                ['Bistum', selectedPersonDiocese?.name ?? 'Nicht zugeordnet'],
+                ['Matrix', selectedPerson.matrixUsername ? `@${selectedPerson.matrixUsername}` : 'Nicht hinterlegt'],
+                ['Status', selectedPerson.blocked ? 'Gesperrt' : 'Aktiv'],
+              ].map(([label, value]) => (
+                <div key={label} className="grid grid-cols-[110px_1fr] gap-3 py-3">
+                  <dt className="text-muted">{label}</dt>
+                  <dd className="font-medium text-ink">{value}</dd>
+                </div>
+              ))}
+              <div className="grid grid-cols-[110px_1fr] gap-3 py-3">
+                <dt className="text-muted">Telefon</dt>
+                <dd className="font-medium text-ink">
+                  {selectedPerson.phone ? (
+                    <a href={`tel:${selectedPerson.phone}`} className="text-ink-warm hover:underline">
+                      {selectedPerson.phone}
+                    </a>
+                  ) : 'Nicht hinterlegt'}
+                </dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+      )}
+
+      {newGroupDioceseId && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4" role="presentation">
+          <form
+            className="w-full max-w-md rounded-2xl border border-hairline bg-surface p-6 shadow-2xl"
+            onSubmit={event => {
+              event.preventDefault()
+              if (newGroupName.trim().length >= 2) {
+                createGroupMutation.mutate({ name: newGroupName.trim(), dioceseId: newGroupDioceseId })
+              }
+            }}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.8px] text-muted">Neue Gruppe</p>
+            <h3 className="mt-1 font-display text-[25px] text-ink">
+              {visibleDioceses.find(diocese => diocese.id === newGroupDioceseId)?.name}
+            </h3>
+            <label className="mt-5 block text-[13px] font-medium text-body" htmlFor="new-tree-group">
+              Gruppenname
+            </label>
+            <input
+              id="new-tree-group"
+              autoFocus
+              value={newGroupName}
+              onChange={event => setNewGroupName(event.target.value)}
+              className="mt-2 w-full rounded-lg border border-hairline-strong bg-surface px-4 py-3 text-[15px] text-ink focus:border-ink focus:outline-none"
+              placeholder="z. B. St. Martin"
+            />
+            {createGroupMutation.error && (
+              <p role="alert" className="mt-3 text-[13px] text-[#dc2626]">
+                {(createGroupMutation.error as Error).message}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setNewGroupDioceseId(null)} className="px-4 py-2 text-[13px] text-muted hover:text-ink">
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                disabled={newGroupName.trim().length < 2 || createGroupMutation.isPending}
+                className="rounded-pill bg-ink-warm px-5 py-2 text-[13px] font-medium text-white hover:bg-ink disabled:opacity-40"
+              >
+                {createGroupMutation.isPending ? 'Wird angelegt…' : 'Gruppe anlegen'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {showCreateDiocese && appUser?.role === 'admin' && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4" role="presentation">
+          <form
+            className="w-full max-w-md rounded-2xl border border-hairline bg-surface p-6 shadow-2xl"
+            onSubmit={event => {
+              event.preventDefault()
+              if (newDioceseName.trim().length >= 2) createDioceseMutation.mutate(newDioceseName.trim())
+            }}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.8px] text-muted">Struktur erweitern</p>
+            <h3 className="mt-1 font-display text-[25px] text-ink">Neues Bistum</h3>
+            <label className="mt-5 block text-[13px] font-medium text-body" htmlFor="new-tree-diocese">
+              Name des Bistums
+            </label>
+            <input
+              id="new-tree-diocese"
+              autoFocus
+              value={newDioceseName}
+              onChange={event => setNewDioceseName(event.target.value)}
+              className="mt-2 w-full rounded-lg border border-hairline-strong bg-surface px-4 py-3 text-[15px] text-ink focus:border-ink focus:outline-none"
+              placeholder="z. B. Bistum Trier"
+            />
+            {createDioceseMutation.error && (
+              <p role="alert" className="mt-3 text-[13px] text-[#dc2626]">
+                {(createDioceseMutation.error as Error).message}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowCreateDiocese(false)} className="px-4 py-2 text-[13px] text-muted hover:text-ink">
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                disabled={newDioceseName.trim().length < 2 || !dioceseIdFromName(newDioceseName) || createDioceseMutation.isPending}
+                className="rounded-pill bg-ink-warm px-5 py-2 text-[13px] font-medium text-white hover:bg-ink disabled:opacity-40"
+              >
+                {createDioceseMutation.isPending ? 'Wird angelegt…' : 'Bistum anlegen'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

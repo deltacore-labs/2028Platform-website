@@ -81,7 +81,12 @@ interface OrganizationTreeProps {
   showMiniteam?: boolean
   canSetPrimaryLeader?: boolean
   canManageLeaders?: boolean
+  canCreateGroups?: boolean
+  canCreateDioceses?: boolean
   onMove: (move: OrganizationMove) => void
+  onCreateGroup?: (dioceseId: string) => void
+  onCreateDiocese?: () => void
+  onSelectPerson?: (uid: string) => void
   onSetPrimaryLeader?: (groupId: string, leaderId: string) => void
   onToggleLeader?: (groupId: string, userId: string, assign: boolean) => void
 }
@@ -265,7 +270,17 @@ function buildTree(
   }
 }
 
-function DropNode({ node, activeType, canEdit }: { node: TreeNode; activeType: DragItem['type'] | null; canEdit: boolean }) {
+function DropNode({
+  node,
+  activeType,
+  canEdit,
+  onCreateGroup,
+}: {
+  node: TreeNode
+  activeType: DragItem['type'] | null
+  canEdit: boolean
+  onCreateGroup?: (dioceseId: string) => void
+}) {
   const target: DropTarget | null = node.type === 'group' && node.dioceseId
     ? { type: 'group', groupId: node.entityId, dioceseId: node.dioceseId }
     : node.type === 'miniteam' && node.dioceseId
@@ -280,7 +295,14 @@ function DropNode({ node, activeType, canEdit }: { node: TreeNode; activeType: D
     disabled: !canEdit || !accepts,
   })
 
-  return <NodeCard node={node} refCallback={setNodeRef} isDropTarget={isOver && accepts} />
+  return (
+    <NodeCard
+      node={node}
+      refCallback={setNodeRef}
+      isDropTarget={isOver && accepts}
+      onCreateGroup={node.type === 'diocese' ? onCreateGroup : undefined}
+    />
+  )
 }
 
 function DraggableNode({
@@ -291,6 +313,7 @@ function DraggableNode({
   canManageLeaders,
   onSetPrimaryLeader,
   onToggleLeader,
+  onSelectPerson,
 }: {
   node: TreeNode
   canEdit: boolean
@@ -299,6 +322,7 @@ function DraggableNode({
   canManageLeaders: boolean
   onSetPrimaryLeader?: (groupId: string, leaderId: string) => void
   onToggleLeader?: (groupId: string, userId: string, assign: boolean) => void
+  onSelectPerson?: (uid: string) => void
 }) {
   const dragItem: DragItem = { type: node.type === 'group' ? 'group' : 'person', id: node.entityId }
   const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
@@ -329,6 +353,7 @@ function DraggableNode({
       dragListeners={listeners}
       onSetPrimaryLeader={canSetPrimaryLeader ? onSetPrimaryLeader : undefined}
       onToggleLeader={canManageLeaders ? onToggleLeader : undefined}
+      onSelectPerson={onSelectPerson}
     />
   )
 }
@@ -343,6 +368,9 @@ function NodeCard({
   dragListeners,
   onSetPrimaryLeader,
   onToggleLeader,
+  onCreateGroup,
+  onCreateDiocese,
+  onSelectPerson,
   overlay = false,
 }: {
   node: TreeNode
@@ -354,6 +382,9 @@ function NodeCard({
   dragListeners?: DraggableSyntheticListeners
   onSetPrimaryLeader?: (groupId: string, leaderId: string) => void
   onToggleLeader?: (groupId: string, userId: string, assign: boolean) => void
+  onCreateGroup?: (dioceseId: string) => void
+  onCreateDiocese?: () => void
+  onSelectPerson?: (uid: string) => void
   overlay?: boolean
 }) {
   const dark = node.type === 'root'
@@ -377,14 +408,48 @@ function NodeCard({
         zIndex: isDragging || overlay ? 20 : 1,
       }}
     >
-      <div className="min-w-0 flex-1">
-        <p className={`text-[12px] font-medium leading-tight truncate ${dark ? 'text-white' : accent ? 'text-[#4c1d95]' : 'text-ink'}`}>
-          {node.label}
-        </p>
-        <p className={`text-[10px] mt-1 truncate ${dark ? 'text-white/55' : accent ? 'text-[#7c3aed]' : 'text-muted'}`}>
-          {node.sub}
-        </p>
-      </div>
+      {node.type === 'person' && onSelectPerson ? (
+        <button
+          type="button"
+          onClick={() => onSelectPerson(node.entityId)}
+          className="min-w-0 flex-1 text-left rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7c3aed]"
+          aria-label={`Details zu ${node.label} anzeigen`}
+        >
+          <p className="text-[12px] font-medium leading-tight truncate text-ink">{node.label}</p>
+          <p className="text-[10px] mt-1 truncate text-muted">{node.sub} · Details</p>
+        </button>
+      ) : (
+        <div className="min-w-0 flex-1">
+          <p className={`text-[12px] font-medium leading-tight truncate ${dark ? 'text-white' : accent ? 'text-[#4c1d95]' : 'text-ink'}`}>
+            {node.label}
+          </p>
+          <p className={`text-[10px] mt-1 truncate ${dark ? 'text-white/55' : accent ? 'text-[#7c3aed]' : 'text-muted'}`}>
+            {node.sub}
+          </p>
+        </div>
+      )}
+      {node.type === 'diocese' && node.dioceseId && onCreateGroup && (
+        <button
+          type="button"
+          onClick={() => onCreateGroup(node.dioceseId!)}
+          className="ml-2 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-canvas text-[18px] leading-none text-ink hover:bg-canvas-deep"
+          aria-label={`Neue Gruppe in ${node.label} anlegen`}
+          title="Neue Gruppe anlegen"
+        >
+          +
+        </button>
+      )}
+      {node.type === 'root' && onCreateDiocese && (
+        <button
+          type="button"
+          onClick={onCreateDiocese}
+          className="ml-2 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/10 text-[18px] leading-none text-white hover:bg-white/20"
+          aria-label="Neues Bistum anlegen"
+          title="Neues Bistum anlegen"
+        >
+          +
+        </button>
+      )}
       {node.groupId && onToggleLeader && (
         <button
           type="button"
@@ -448,7 +513,12 @@ export function OrganizationTree({
   showMiniteam = true,
   canSetPrimaryLeader = false,
   canManageLeaders = false,
+  canCreateGroups = false,
+  canCreateDioceses = false,
   onMove,
+  onCreateGroup,
+  onCreateDiocese,
+  onSelectPerson,
   onSetPrimaryLeader,
   onToggleLeader,
 }: OrganizationTreeProps) {
@@ -530,7 +600,13 @@ export function OrganizationTree({
           </svg>
 
           {nodes.map(node => node.type === 'root' || node.type === 'unassigned'
-            ? <NodeCard key={node.key} node={node} />
+            ? (
+                <NodeCard
+                  key={node.key}
+                  node={node}
+                  onCreateDiocese={node.type === 'root' && canCreateDioceses && !isMoving ? onCreateDiocese : undefined}
+                />
+              )
             : node.type === 'person' || node.type === 'group'
               ? (
                   <DraggableNode
@@ -542,9 +618,18 @@ export function OrganizationTree({
                     canManageLeaders={canManageLeaders && !isMoving}
                     onSetPrimaryLeader={onSetPrimaryLeader}
                     onToggleLeader={onToggleLeader}
+                    onSelectPerson={onSelectPerson}
                   />
                 )
-              : <DropNode key={node.key} node={node} activeType={active?.type ?? null} canEdit={canEdit && !isMoving} />
+              : (
+                  <DropNode
+                    key={node.key}
+                    node={node}
+                    activeType={active?.type ?? null}
+                    canEdit={canEdit && !isMoving}
+                    onCreateGroup={canCreateGroups && !isMoving ? onCreateGroup : undefined}
+                  />
+                )
           )}
         </div>
       </div>
