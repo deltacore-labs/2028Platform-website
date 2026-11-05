@@ -107,6 +107,39 @@ export function EmergencyPage() {
                         {r.reporterPhone}
                       </a>
                     )}
+                    {(r.groupName || r.groupLeaders.length > 0) && (
+                      <div className="mt-4 rounded-xl border border-hairline bg-[#fafaf9] px-3.5 py-3">
+                        {r.groupName && (
+                          <div className="flex items-baseline gap-2 text-[13px]">
+                            <span className="w-28 shrink-0 text-muted">Gruppe</span>
+                            <span className="font-medium text-ink">{r.groupName}</span>
+                          </div>
+                        )}
+                        {r.groupLeaders.map((leader, index) => (
+                          <div
+                            key={`${leader.name}-${leader.phone ?? index}`}
+                            className={`flex items-start gap-2 text-[13px] ${r.groupName || index > 0 ? 'mt-2' : ''}`}
+                          >
+                            <span className="w-28 shrink-0 text-muted">
+                              {index === 0 ? 'Gruppenleitung' : ''}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="font-medium text-ink">{leader.name}</span>
+                              {leader.phone ? (
+                                <a
+                                  href={`tel:${leader.phone}`}
+                                  className="ml-2 whitespace-nowrap text-ink-warm hover:underline underline-offset-2"
+                                >
+                                  {leader.phone}
+                                </a>
+                              ) : (
+                                <span className="ml-2 text-muted">Keine Telefonnummer</span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {r.lat != null && r.lng != null ? (
                       <div className="mt-4 overflow-hidden rounded-xl border border-hairline bg-white">
                         <iframe

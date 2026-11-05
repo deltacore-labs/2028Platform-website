@@ -70,6 +70,11 @@ export interface EmergencyReport {
   reporterName: string
   reporterPhone: string | null
   groupId: string | null
+  groupName: string | null
+  groupLeaders: Array<{
+    name: string
+    phone: string | null
+  }>
   dioceseId?: string | null
   lat: number | null
   lng: number | null

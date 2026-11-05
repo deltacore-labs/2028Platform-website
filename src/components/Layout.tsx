@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
+import { fetchEmergencyReports } from '../api/emergency'
 import { useAuth } from '../context/AuthContext'
 import { EmergencyAlert } from './EmergencyAlert'
 import { ForcePasswordChange } from './ForcePasswordChange'
@@ -98,7 +100,16 @@ export function Layout() {
   const { appUser } = useAuth()
   const { pathname } = useLocation()
   const role = appUser?.role ?? 'participant'
+  const canSeeEmergencies = role === 'miniteam' || role === 'admin'
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { data: emergencyReports = [] } = useQuery({
+    queryKey: ['emergency'],
+    queryFn: fetchEmergencyReports,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: true,
+    enabled: canSeeEmergencies,
+  })
+  const activeEmergencyCount = emergencyReports.filter(report => report.status !== 'resolved').length
 
   useEffect(() => {
     if (!mobileMenuOpen) return
@@ -186,23 +197,40 @@ export function Layout() {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `group flex min-h-11 items-center gap-3 rounded-xl border px-3 py-2 text-[14px] font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:scale-[0.98] ${
-                        isActive
-                          ? 'border-hairline bg-surface text-ink shadow-[0_1px_2px_rgba(12,10,9,0.04),0_5px_16px_rgba(12,10,9,0.05)]'
-                          : 'border-transparent text-body hover:bg-hairline-soft hover:text-ink'
+                    className={({ isActive }) => {
+                      const hasEmergency = item.icon === 'emergency' && activeEmergencyCount > 0
+
+                      return `group flex min-h-11 items-center gap-3 rounded-xl border px-3 py-2 text-[14px] font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 active:scale-[0.98] ${
+                        hasEmergency
+                          ? 'border-red-200 bg-red-50 text-red-700 shadow-[0_1px_2px_rgba(220,38,38,0.08),0_5px_18px_rgba(220,38,38,0.10)] hover:bg-red-100'
+                          : isActive
+                            ? 'border-hairline bg-surface text-ink shadow-[0_1px_2px_rgba(12,10,9,0.04),0_5px_16px_rgba(12,10,9,0.05)]'
+                            : 'border-transparent text-body hover:bg-hairline-soft hover:text-ink'
                       }`
-                    }
+                    }}
                   >
                     {({ isActive }) => (
                       <>
                         <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors ${
-                          isActive ? 'bg-ink-warm text-white' : 'bg-surface-strong text-muted group-hover:text-ink'
+                          item.icon === 'emergency' && activeEmergencyCount > 0
+                            ? 'bg-red-600 text-white'
+                            : isActive
+                              ? 'bg-ink-warm text-white'
+                              : 'bg-surface-strong text-muted group-hover:text-ink'
                         }`}>
                           <Icon name={item.icon} />
                         </span>
                         <span className="truncate">{item.label}</span>
-                        {isActive && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-ink-warm" aria-hidden="true" />}
+                        {item.icon === 'emergency' && activeEmergencyCount > 0 ? (
+                          <span
+                            className="emergency-nav-count ml-auto grid min-w-6 place-items-center rounded-full bg-red-600 px-1.5 py-0.5 text-[11px] font-semibold leading-5 text-white"
+                            aria-label={`${activeEmergencyCount} offene Notfälle`}
+                          >
+                            {activeEmergencyCount}
+                          </span>
+                        ) : isActive ? (
+                          <span className="ml-auto h-1.5 w-1.5 rounded-full bg-ink-warm" aria-hidden="true" />
+                        ) : null}
                       </>
                     )}
                   </NavLink>
