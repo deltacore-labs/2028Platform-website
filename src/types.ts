@@ -14,6 +14,7 @@ export interface AppUser {
   dioceseId: string | null
   matrixUserId: string | null
   matrixUsername: string | null
+  hasAccount: boolean
   fcmToken: string | null
   mustChangePassword: number
   blocked: number

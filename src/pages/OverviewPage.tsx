@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchAllUsers, updateUserAssignment } from '../api/users'
+import { createPersonWithoutAccount, fetchAllUsers, updateUserAssignment } from '../api/users'
 import { createGroup, fetchGroups, setGroupLeaderRole, setPrimaryGroupLeader, updateGroup } from '../api/groups'
 import { createDiocese, fetchDioceses } from '../api/dioceses'
 import { fetchEmergencyReports } from '../api/emergency'
@@ -31,6 +31,9 @@ export function OverviewPage() {
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null)
   const [newGroupDioceseId, setNewGroupDioceseId] = useState<string | null>(null)
   const [newGroupName, setNewGroupName] = useState('')
+  const [newPersonDioceseId, setNewPersonDioceseId] = useState<string | null>(null)
+  const [newPersonName, setNewPersonName] = useState('')
+  const [newPersonPhone, setNewPersonPhone] = useState('')
   const [showCreateDiocese, setShowCreateDiocese] = useState(false)
   const [newDioceseName, setNewDioceseName] = useState('')
   const { data: users = [], isLoading: loadingUsers } = useQuery({
@@ -301,6 +304,18 @@ export function OverviewPage() {
     },
   })
 
+  const createPersonMutation = useMutation({
+    mutationFn: ({ name, dioceseId, phone }: { name: string; dioceseId: string; phone?: string }) =>
+      createPersonWithoutAccount(name, dioceseId, phone),
+    onSuccess: async created => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
+      setMoveMessage(`${created.name} wurde ohne App-Konto angelegt und kann jetzt zugeordnet werden.`)
+      setNewPersonName('')
+      setNewPersonPhone('')
+      setNewPersonDioceseId(null)
+    },
+  })
+
   const kpis = isLeader ? [
     { label: 'Personen', value: totalUsers },
     { label: 'Teilnehmer', value: participants },
@@ -440,13 +455,13 @@ export function OverviewPage() {
           <p className="text-[12px] text-body mb-4">
             Ziehe Gruppen am Griff auf ein Bistum und Personen auf eine Gruppe oder das Mini-Team.
             Mit L+ weist du die Leiterrolle zu; der Stern markiert den Hauptansprechpartner.
-            Über + legst du Gruppen und als Admin auch Bistümer direkt im Baum an.
+            Mit P+ legst du Personen ohne Konto an, mit G+ Gruppen und als Admin an der Wurzel weitere Bistümer.
           </p>
         )}
         {moveMessage && (
           <div
             role="status"
-            className={`mb-4 rounded-lg border px-3 py-2 text-[12px] ${moveMutation.isError || primaryLeaderMutation.isError || leaderRoleMutation.isError || createGroupMutation.isError || createDioceseMutation.isError ? 'border-red-200 bg-red-50 text-[#dc2626]' : 'border-[#bbf7d0] bg-[#f0faf4] text-[#166534]'}`}
+            className={`mb-4 rounded-lg border px-3 py-2 text-[12px] ${moveMutation.isError || primaryLeaderMutation.isError || leaderRoleMutation.isError || createGroupMutation.isError || createDioceseMutation.isError || createPersonMutation.isError ? 'border-red-200 bg-red-50 text-[#dc2626]' : 'border-[#bbf7d0] bg-[#f0faf4] text-[#166534]'}`}
           >
             {moveMessage}
           </div>
@@ -477,7 +492,7 @@ export function OverviewPage() {
             canManageLeaders={appUser?.role === 'admin' || appUser?.role === 'miniteam'}
             canCreateGroups={appUser?.role === 'admin' || appUser?.role === 'miniteam'}
             canCreateDioceses={appUser?.role === 'admin'}
-            isMoving={moveMutation.isPending || primaryLeaderMutation.isPending || leaderRoleMutation.isPending || createGroupMutation.isPending || createDioceseMutation.isPending}
+            isMoving={moveMutation.isPending || primaryLeaderMutation.isPending || leaderRoleMutation.isPending || createGroupMutation.isPending || createDioceseMutation.isPending || createPersonMutation.isPending}
             onMove={move => {
               setMoveMessage(null)
               moveMutation.mutate(move)
@@ -494,6 +509,12 @@ export function OverviewPage() {
               setMoveMessage(null)
               setNewGroupName('')
               setNewGroupDioceseId(dioceseId)
+            }}
+            onCreatePerson={dioceseId => {
+              setMoveMessage(null)
+              setNewPersonName('')
+              setNewPersonPhone('')
+              setNewPersonDioceseId(dioceseId)
             }}
             onCreateDiocese={() => {
               setMoveMessage(null)
@@ -617,6 +638,7 @@ export function OverviewPage() {
                 ['Gruppe', selectedPersonGroup?.name ?? (selectedPerson.role === 'miniteam' ? 'Mini-Team' : 'Nicht zugeordnet')],
                 ['Bistum', selectedPersonDiocese?.name ?? 'Nicht zugeordnet'],
                 ['Matrix', selectedPerson.matrixUsername ? `@${selectedPerson.matrixUsername}` : 'Nicht hinterlegt'],
+                ['Konto', selectedPerson.hasAccount ? 'App-Konto vorhanden' : 'Kein App-Konto'],
                 ['Status', selectedPerson.blocked ? 'Gesperrt' : 'Aktiv'],
               ].map(([label, value]) => (
                 <div key={label} className="grid grid-cols-[110px_1fr] gap-3 py-3">
@@ -636,6 +658,71 @@ export function OverviewPage() {
               </div>
             </dl>
           </section>
+        </div>
+      )}
+
+      {newPersonDioceseId && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/35 p-4" role="presentation">
+          <form
+            className="w-full max-w-md rounded-2xl border border-hairline bg-surface p-6 shadow-2xl"
+            onSubmit={event => {
+              event.preventDefault()
+              if (newPersonName.trim().length >= 2) {
+                createPersonMutation.mutate({
+                  name: newPersonName.trim(),
+                  dioceseId: newPersonDioceseId,
+                  phone: newPersonPhone.trim() || undefined,
+                })
+              }
+            }}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.8px] text-muted">Person ohne Konto</p>
+            <h3 className="mt-1 font-display text-[25px] text-ink">
+              {visibleDioceses.find(diocese => diocese.id === newPersonDioceseId)?.name}
+            </h3>
+            <label className="mt-5 block text-[13px] font-medium text-body" htmlFor="new-tree-person">
+              Name
+            </label>
+            <input
+              id="new-tree-person"
+              autoFocus
+              value={newPersonName}
+              onChange={event => setNewPersonName(event.target.value)}
+              className="mt-2 w-full rounded-lg border border-hairline-strong bg-surface px-4 py-3 text-[15px] text-ink focus:border-ink focus:outline-none"
+              placeholder="Vor- und Nachname"
+            />
+            <label className="mt-4 block text-[13px] font-medium text-body" htmlFor="new-tree-person-phone">
+              Telefon (optional)
+            </label>
+            <input
+              id="new-tree-person-phone"
+              type="tel"
+              value={newPersonPhone}
+              onChange={event => setNewPersonPhone(event.target.value)}
+              className="mt-2 w-full rounded-lg border border-hairline-strong bg-surface px-4 py-3 text-[15px] text-ink focus:border-ink focus:outline-none"
+              placeholder="+49 …"
+            />
+            {createPersonMutation.error && (
+              <p role="alert" className="mt-3 text-[13px] text-[#dc2626]">
+                {(createPersonMutation.error as Error).message}
+              </p>
+            )}
+            <p className="mt-3 text-[12px] text-muted">
+              Es wird kein Login erstellt. Die Person erscheint zunächst unter „Nicht zugeordnet“ und kann anschließend in eine Gruppe gezogen werden.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setNewPersonDioceseId(null)} className="px-4 py-2 text-[13px] text-muted hover:text-ink">
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                disabled={newPersonName.trim().length < 2 || createPersonMutation.isPending}
+                className="rounded-pill bg-ink-warm px-5 py-2 text-[13px] font-medium text-white hover:bg-ink disabled:opacity-40"
+              >
+                {createPersonMutation.isPending ? 'Wird angelegt…' : 'Person anlegen'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

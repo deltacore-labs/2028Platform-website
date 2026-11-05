@@ -10,6 +10,7 @@ type ApiUser = {
   diocese_id: string | null
   matrix_user_id: string | null
   matrix_username: string | null
+  has_account: boolean
   blocked: number
 }
 
@@ -36,6 +37,7 @@ export const fetchAllUsers = () =>
       dioceseId: u.diocese_id,
       matrixUserId: u.matrix_user_id ?? null,
       matrixUsername: u.matrix_username ?? null,
+      hasAccount: u.has_account ?? true,
       fcmToken: null,
       mustChangePassword: 0,
       blocked: u.blocked ?? 0,
@@ -73,6 +75,28 @@ export const createUser = (name: string, email: string, role: string, matrixUser
     role,
     ...(matrixUsername ? { matrix_username: matrixUsername } : {}),
   }).then(r => r.data)
+
+export const createPersonWithoutAccount = (name: string, dioceseId: string, phone?: string) =>
+  apiClient.post<ApiUser>('/v1/users/manual', {
+    name,
+    diocese_id: dioceseId,
+    ...(phone ? { phone } : {}),
+  }).then(r => ({
+    uid: r.data.uid,
+    name: r.data.name,
+    role: r.data.role,
+    groupId: r.data.group_id,
+    phone: r.data.phone,
+    dioceseId: r.data.diocese_id,
+    matrixUserId: r.data.matrix_user_id ?? null,
+    matrixUsername: r.data.matrix_username ?? null,
+    hasAccount: false,
+    fcmToken: null,
+    mustChangePassword: 0,
+    blocked: 0,
+    createdAt: '',
+    updatedAt: '',
+  } as AppUser))
 
 export const deleteUser = (uid: string): Promise<void> =>
   apiClient.delete(`/v1/users/${uid}`).then(() => undefined)

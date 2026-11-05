@@ -53,6 +53,7 @@ interface TreeNode {
   groupId?: string
   isLeader?: boolean
   isPrimaryLeader?: boolean
+  hasAccount?: boolean
 }
 
 interface Branch {
@@ -85,6 +86,7 @@ interface OrganizationTreeProps {
   canCreateDioceses?: boolean
   onMove: (move: OrganizationMove) => void
   onCreateGroup?: (dioceseId: string) => void
+  onCreatePerson?: (dioceseId: string) => void
   onCreateDiocese?: () => void
   onSelectPerson?: (uid: string) => void
   onSetPrimaryLeader?: (groupId: string, leaderId: string) => void
@@ -226,7 +228,9 @@ function buildTree(
           type: 'person',
           entityId: person.uid,
           label: person.name,
-          sub: person.uid === branch.primaryLeaderId ? 'Hauptansprechpartner' : roleLabel[person.role],
+          sub: person.uid === branch.primaryLeaderId
+            ? 'Hauptansprechpartner'
+            : `${roleLabel[person.role]}${person.hasAccount ? '' : ' · kein Konto'}`,
           x: personX,
           y: PAD + (showEventRoot ? 3 : 2) * LEVEL_GAP,
           width: PERSON_W,
@@ -237,6 +241,7 @@ function buildTree(
           groupId: branch.type === 'group' ? branch.id : undefined,
           isLeader: person.role === 'leader',
           isPrimaryLeader: person.uid === branch.primaryLeaderId,
+          hasAccount: person.hasAccount,
         })
         personX += PERSON_W + SIBLING_GAP
       }
@@ -275,11 +280,13 @@ function DropNode({
   activeType,
   canEdit,
   onCreateGroup,
+  onCreatePerson,
 }: {
   node: TreeNode
   activeType: DragItem['type'] | null
   canEdit: boolean
   onCreateGroup?: (dioceseId: string) => void
+  onCreatePerson?: (dioceseId: string) => void
 }) {
   const target: DropTarget | null = node.type === 'group' && node.dioceseId
     ? { type: 'group', groupId: node.entityId, dioceseId: node.dioceseId }
@@ -301,6 +308,7 @@ function DropNode({
       refCallback={setNodeRef}
       isDropTarget={isOver && accepts}
       onCreateGroup={node.type === 'diocese' ? onCreateGroup : undefined}
+      onCreatePerson={node.type === 'diocese' ? onCreatePerson : undefined}
     />
   )
 }
@@ -369,6 +377,7 @@ function NodeCard({
   onSetPrimaryLeader,
   onToggleLeader,
   onCreateGroup,
+  onCreatePerson,
   onCreateDiocese,
   onSelectPerson,
   overlay = false,
@@ -383,6 +392,7 @@ function NodeCard({
   onSetPrimaryLeader?: (groupId: string, leaderId: string) => void
   onToggleLeader?: (groupId: string, userId: string, assign: boolean) => void
   onCreateGroup?: (dioceseId: string) => void
+  onCreatePerson?: (dioceseId: string) => void
   onCreateDiocese?: () => void
   onSelectPerson?: (uid: string) => void
   overlay?: boolean
@@ -429,15 +439,28 @@ function NodeCard({
         </div>
       )}
       {node.type === 'diocese' && node.dioceseId && onCreateGroup && (
-        <button
-          type="button"
-          onClick={() => onCreateGroup(node.dioceseId!)}
-          className="ml-2 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-canvas text-[18px] leading-none text-ink hover:bg-canvas-deep"
-          aria-label={`Neue Gruppe in ${node.label} anlegen`}
-          title="Neue Gruppe anlegen"
-        >
-          +
-        </button>
+        <div className="ml-1 flex shrink-0 items-center">
+          {onCreatePerson && (
+            <button
+              type="button"
+              onClick={() => onCreatePerson(node.dioceseId!)}
+              className="grid h-8 min-w-8 place-items-center rounded-lg px-1 text-[10px] font-bold text-muted hover:bg-canvas hover:text-ink"
+              aria-label={`Person ohne Konto in ${node.label} anlegen`}
+              title="Person ohne Konto anlegen"
+            >
+              P+
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onCreateGroup(node.dioceseId!)}
+            className="grid h-8 min-w-8 place-items-center rounded-lg px-1 text-[10px] font-bold text-muted hover:bg-canvas hover:text-ink"
+            aria-label={`Neue Gruppe in ${node.label} anlegen`}
+            title="Neue Gruppe anlegen"
+          >
+            G+
+          </button>
+        </div>
       )}
       {node.type === 'root' && onCreateDiocese && (
         <button
@@ -450,7 +473,7 @@ function NodeCard({
           +
         </button>
       )}
-      {node.groupId && onToggleLeader && (
+      {node.groupId && node.hasAccount !== false && onToggleLeader && (
         <button
           type="button"
           onClick={() => onToggleLeader(node.groupId!, node.entityId, !node.isLeader)}
@@ -517,6 +540,7 @@ export function OrganizationTree({
   canCreateDioceses = false,
   onMove,
   onCreateGroup,
+  onCreatePerson,
   onCreateDiocese,
   onSelectPerson,
   onSetPrimaryLeader,
@@ -628,6 +652,7 @@ export function OrganizationTree({
                     activeType={active?.type ?? null}
                     canEdit={canEdit && !isMoving}
                     onCreateGroup={canCreateGroups && !isMoving ? onCreateGroup : undefined}
+                    onCreatePerson={canCreateGroups && !isMoving ? onCreatePerson : undefined}
                   />
                 )
           )}
