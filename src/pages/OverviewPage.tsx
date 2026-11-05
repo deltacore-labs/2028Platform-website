@@ -12,6 +12,7 @@ const roleName: Record<AppUser['role'], string> = {
   participant: 'Teilnehmer',
   leader: 'Leiter',
   miniteam: 'Mini-Team',
+  malteser: 'Malteser',
   admin: 'Admin',
 }
 
@@ -122,10 +123,11 @@ export function OverviewPage() {
   const participants = visibleUsers.filter(u => u.role === 'participant').length
   const leaders = visibleUsers.filter(u => u.role === 'leader').length
   const miniteams = visibleUsers.filter(u => u.role === 'miniteam').length
+  const malteser = visibleUsers.filter(u => u.role === 'malteser').length
   const admins = visibleUsers.filter(u => u.role === 'admin').length
   const blocked = visibleUsers.filter(u => u.blocked).length
   const withoutAssignment = visibleUsers.filter(u =>
-    !u.groupId && u.role !== 'miniteam' && u.role !== 'admin',
+    !u.groupId && u.role !== 'miniteam' && u.role !== 'malteser' && u.role !== 'admin',
   ).length
   const withoutDiocese = visibleUsers.filter(u => !u.dioceseId).length
   const withoutPhone = visibleUsers.filter(u => !u.phone).length
@@ -140,7 +142,9 @@ export function OverviewPage() {
       }
       await updateUserAssignment(move.uid, move.type === 'person-to-group'
         ? { kind: 'group', groupId: move.groupId }
-        : { kind: 'miniteam', dioceseId: move.dioceseId })
+        : move.type === 'person-to-miniteam'
+          ? { kind: 'miniteam', dioceseId: move.dioceseId }
+          : { kind: 'malteser', dioceseId: move.dioceseId })
     },
     onMutate: async move => {
       await Promise.all([
@@ -164,14 +168,20 @@ export function OverviewPage() {
                 ...user,
                 groupId: move.groupId,
                 dioceseId: move.dioceseId,
-                role: user.role === 'miniteam' ? 'participant' : user.role,
+                role: user.role === 'miniteam' || user.role === 'malteser' ? 'participant' : user.role,
               }
+            : user,
+        ))
+      } else if (move.type === 'person-to-miniteam') {
+        queryClient.setQueryData<AppUser[]>(['users'], current => current?.map(user =>
+          user.uid === move.uid
+            ? { ...user, groupId: null, dioceseId: move.dioceseId, role: 'miniteam' }
             : user,
         ))
       } else {
         queryClient.setQueryData<AppUser[]>(['users'], current => current?.map(user =>
           user.uid === move.uid
-            ? { ...user, groupId: null, dioceseId: move.dioceseId, role: 'miniteam' }
+            ? { ...user, groupId: null, dioceseId: move.dioceseId, role: 'malteser' }
             : user,
         ))
       }
@@ -194,7 +204,9 @@ export function OverviewPage() {
         ? `${group?.name ?? 'Gruppe'} wurde nach ${diocese?.name ?? 'Bistum'} verschoben. Alle Mitglieder wurden mit umgetragen.`
         : move.type === 'person-to-group'
           ? `${person?.name ?? 'Person'} gehört jetzt zu ${group?.name ?? 'der Gruppe'} in ${diocese?.name ?? 'dem Bistum'}.`
-          : `${person?.name ?? 'Person'} gehört jetzt zum Mini-Team von ${diocese?.name ?? 'dem Bistum'}.`)
+          : move.type === 'person-to-miniteam'
+            ? `${person?.name ?? 'Person'} gehört jetzt zum Mini-Team von ${diocese?.name ?? 'dem Bistum'}.`
+            : `${person?.name ?? 'Person'} gehört jetzt zu den Maltesern von ${diocese?.name ?? 'dem Bistum'}.`)
     },
     onError: (error, _move, context) => {
       if (context?.previousUsers) queryClient.setQueryData(['users'], context.previousUsers)
@@ -342,6 +354,7 @@ export function OverviewPage() {
     { label: 'Teilnehmer', count: participants, bar: 'bg-hairline-strong' },
     { label: 'Leiter', count: leaders, bar: 'bg-[#86efac]' },
     { label: 'Miniteam', count: miniteams, bar: 'bg-[#c4b5fd]' },
+    { label: 'Malteser', count: malteser, bar: 'bg-red-300' },
     { label: 'Admin', count: admins, bar: 'bg-canvas-deep' },
   ]
 
@@ -449,11 +462,11 @@ export function OverviewPage() {
           Struktur
         </p>
         <p className="text-[12px] text-muted-soft mb-4">
-          {isLeader ? 'Bistum → eigene Gruppe → Leitung und Mitglieder' : 'Bistümer → Gruppen / Mini-Teams → Personen'}
+          {isLeader ? 'Bistum → eigene Gruppe → Leitung und Mitglieder' : 'Bistümer → Gruppen / Mini-Teams / Malteser → Personen'}
         </p>
         {(appUser?.role === 'admin' || appUser?.role === 'miniteam') && (
           <p className="text-[12px] text-body mb-4">
-            Ziehe Gruppen am Griff auf ein Bistum und Personen auf eine Gruppe oder das Mini-Team.
+            Ziehe Gruppen am Griff auf ein Bistum und Personen auf eine Gruppe, das Mini-Team oder die Malteser.
             Mit L+ weist du die Leiterrolle zu; der Stern markiert den Hauptansprechpartner.
             Mit P+ legst du Personen ohne Konto an, mit G+ Gruppen und als Admin an der Wurzel weitere Bistümer.
           </p>
@@ -635,7 +648,7 @@ export function OverviewPage() {
             <dl className="mt-5 divide-y divide-hairline text-[14px]">
               {[
                 ['Rolle', roleName[selectedPerson.role]],
-                ['Gruppe', selectedPersonGroup?.name ?? (selectedPerson.role === 'miniteam' ? 'Mini-Team' : 'Nicht zugeordnet')],
+                ['Gruppe', selectedPersonGroup?.name ?? (selectedPerson.role === 'miniteam' ? 'Mini-Team' : selectedPerson.role === 'malteser' ? 'Malteser' : 'Nicht zugeordnet')],
                 ['Bistum', selectedPersonDiocese?.name ?? 'Nicht zugeordnet'],
                 ['Matrix', selectedPerson.matrixUsername ? `@${selectedPerson.matrixUsername}` : 'Nicht hinterlegt'],
                 ['Konto', selectedPerson.hasAccount ? 'App-Konto vorhanden' : 'Kein App-Konto'],

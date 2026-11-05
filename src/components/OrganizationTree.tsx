@@ -30,12 +30,13 @@ const SIBLING_GAP = 14
 const DIOCESE_GAP = 36
 const PAD = 42
 
-type TreeNodeType = 'root' | 'diocese' | 'group' | 'miniteam' | 'unassigned' | 'person'
+type TreeNodeType = 'root' | 'diocese' | 'group' | 'miniteam' | 'malteser' | 'unassigned' | 'person'
 type DragItem = { type: 'group' | 'person'; id: string }
 type DropTarget =
   | { type: 'diocese'; dioceseId: string }
   | { type: 'group'; groupId: string; dioceseId: string }
   | { type: 'miniteam'; dioceseId: string }
+  | { type: 'malteser'; dioceseId: string }
 
 interface TreeNode {
   key: string
@@ -57,7 +58,7 @@ interface TreeNode {
 }
 
 interface Branch {
-  type: 'group' | 'miniteam' | 'unassigned'
+  type: 'group' | 'miniteam' | 'malteser' | 'unassigned'
   id: string
   name: string
   dioceseId: string
@@ -70,6 +71,7 @@ export type OrganizationMove =
   | { type: 'group'; groupId: string; dioceseId: string }
   | { type: 'person-to-group'; uid: string; groupId: string; dioceseId: string }
   | { type: 'person-to-miniteam'; uid: string; dioceseId: string }
+  | { type: 'person-to-malteser'; uid: string; dioceseId: string }
 
 interface OrganizationTreeProps {
   users: AppUser[]
@@ -97,6 +99,7 @@ const roleLabel: Record<AppUser['role'], string> = {
   participant: 'Teilnehmer',
   leader: 'Leiter',
   miniteam: 'Mini-Team',
+  malteser: 'Malteser',
   admin: 'Admin',
 }
 
@@ -157,10 +160,20 @@ function buildTree(
         primaryLeaderId: null,
         primaryLeaderName: null,
       })
+      branches.splice(1, 0, {
+        type: 'malteser',
+        id: `malteser:${entry.diocese.id}`,
+        name: 'Malteser',
+        dioceseId: entry.diocese.id,
+        people: entry.people.filter(user => user.role === 'malteser' && !user.groupId),
+        primaryLeaderId: null,
+        primaryLeaderName: null,
+      })
     }
 
     const unassignedPeople = entry.people.filter(user =>
-      (isOrphan || user.role !== 'miniteam') && (!user.groupId || !groupedIds.has(user.groupId)),
+      (isOrphan || (user.role !== 'miniteam' && user.role !== 'malteser')) &&
+        (!user.groupId || !groupedIds.has(user.groupId)),
     )
     if (unassignedPeople.length > 0 || isOrphan) {
       branches.push({
@@ -292,6 +305,8 @@ function DropNode({
     ? { type: 'group', groupId: node.entityId, dioceseId: node.dioceseId }
     : node.type === 'miniteam' && node.dioceseId
       ? { type: 'miniteam', dioceseId: node.dioceseId }
+      : node.type === 'malteser' && node.dioceseId
+        ? { type: 'malteser', dioceseId: node.dioceseId }
       : node.type === 'diocese' && node.dioceseId
         ? { type: 'diocese', dioceseId: node.dioceseId }
         : null
@@ -398,14 +413,15 @@ function NodeCard({
   overlay?: boolean
 }) {
   const dark = node.type === 'root'
-  const accent = node.type === 'miniteam'
+  const accent = node.type === 'miniteam' || node.type === 'malteser'
   const warning = node.type === 'unassigned' || (node.type === 'diocese' && node.entityId === '__unassigned__')
   return (
     <div
       ref={refCallback}
       className={`absolute rounded-xl border flex items-center px-3 shadow-[0_2px_8px_rgba(0,0,0,0.06)] transition-[border-color,box-shadow,opacity] ${
         dark ? 'bg-canvas-deep border-canvas-deep'
-          : accent ? 'bg-[#f5f0fa] border-[#e9d5ff]'
+          : node.type === 'malteser' ? 'bg-red-50 border-red-200'
+            : accent ? 'bg-[#f5f0fa] border-[#e9d5ff]'
             : warning ? 'bg-amber-50 border-amber-200 border-dashed'
               : 'bg-surface border-hairline'
       } ${isDropTarget ? 'ring-2 ring-[#7c3aed] ring-offset-2 border-[#7c3aed]' : ''} ${isDragging && !overlay ? 'opacity-20' : ''} ${overlay ? 'shadow-xl' : ''}`}
@@ -430,10 +446,10 @@ function NodeCard({
         </button>
       ) : (
         <div className="min-w-0 flex-1">
-          <p className={`text-[12px] font-medium leading-tight truncate ${dark ? 'text-white' : accent ? 'text-[#4c1d95]' : 'text-ink'}`}>
+          <p className={`text-[12px] font-medium leading-tight truncate ${dark ? 'text-white' : node.type === 'malteser' ? 'text-red-800' : accent ? 'text-[#4c1d95]' : 'text-ink'}`}>
             {node.label}
           </p>
-          <p className={`text-[10px] mt-1 truncate ${dark ? 'text-white/55' : accent ? 'text-[#7c3aed]' : 'text-muted'}`}>
+          <p className={`text-[10px] mt-1 truncate ${dark ? 'text-white/55' : node.type === 'malteser' ? 'text-red-600' : accent ? 'text-[#7c3aed]' : 'text-muted'}`}>
             {node.sub}
           </p>
         </div>
@@ -580,11 +596,13 @@ export function OrganizationTree({
     const person = users.find(candidate => candidate.uid === item.id)
     if (!person) return
     if (target.type === 'group') {
-      if (person.groupId !== target.groupId || person.dioceseId !== target.dioceseId || person.role === 'miniteam') {
+      if (person.groupId !== target.groupId || person.dioceseId !== target.dioceseId || person.role === 'miniteam' || person.role === 'malteser') {
         onMove({ type: 'person-to-group', uid: item.id, groupId: target.groupId, dioceseId: target.dioceseId })
       }
-    } else if (person.dioceseId !== target.dioceseId || person.groupId || person.role !== 'miniteam') {
+    } else if (target.type === 'miniteam' && (person.dioceseId !== target.dioceseId || person.groupId || person.role !== 'miniteam')) {
       onMove({ type: 'person-to-miniteam', uid: item.id, dioceseId: target.dioceseId })
+    } else if (target.type === 'malteser' && (person.dioceseId !== target.dioceseId || person.groupId || person.role !== 'malteser')) {
+      onMove({ type: 'person-to-malteser', uid: item.id, dioceseId: target.dioceseId })
     }
   }
 

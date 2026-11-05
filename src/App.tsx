@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import { LandingPage } from './pages/LandingPage'
+import { useAuth } from './context/AuthContext'
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
 const EmergencyPage = lazy(() => import('./pages/EmergencyPage').then(m => ({ default: m.EmergencyPage })))
@@ -16,6 +17,16 @@ const OverviewPage = lazy(() => import('./pages/OverviewPage').then(m => ({ defa
 const LegalPage = lazy(() => import('./pages/LegalPage').then(m => ({ default: m.LegalPage })))
 
 const queryClient = new QueryClient()
+
+function AdminIndexRedirect() {
+  const { appUser } = useAuth()
+  return (
+    <Navigate
+      to={appUser?.role === 'malteser' ? '/admin/emergency' : '/admin/overview'}
+      replace
+    />
+  )
+}
 
 export default function App() {
   return (
@@ -31,23 +42,44 @@ export default function App() {
             <Route
               path="/admin"
               element={
-                <ProtectedRoute requiredRole="leader">
+                <ProtectedRoute>
                   <Layout />
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/admin/overview" replace />} />
-              <Route path="overview" element={<OverviewPage />} />
+              <Route index element={<AdminIndexRedirect />} />
+              <Route
+                path="overview"
+                element={
+                  <ProtectedRoute requiredRole="leader">
+                    <OverviewPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="emergency"
                 element={
-                  <ProtectedRoute requiredRole="miniteam">
+                  <ProtectedRoute requiredRole="emergency">
                     <EmergencyPage />
                   </ProtectedRoute>
                 }
               />
-              <Route path="announcements" element={<AnnouncementsPage />} />
-              <Route path="events" element={<EventsPage />} />
+              <Route
+                path="announcements"
+                element={
+                  <ProtectedRoute requiredRole="leader">
+                    <AnnouncementsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="events"
+                element={
+                  <ProtectedRoute requiredRole="leader">
+                    <EventsPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="locations" element={<Navigate to="/admin/events" replace />} />
               <Route
                 path="users"

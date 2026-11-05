@@ -58,11 +58,12 @@ export const updateUserDiocese = (uid: string, dioceseId: string | null) =>
 export type UserAssignment =
   | { kind: 'group'; groupId: string }
   | { kind: 'miniteam'; dioceseId: string }
+  | { kind: 'malteser'; dioceseId: string }
 
 export const updateUserAssignment = (uid: string, assignment: UserAssignment) =>
   apiClient.put(`/v1/users/${uid}/assignment`, assignment.kind === 'group'
     ? { assignment: 'group', group_id: assignment.groupId }
-    : { assignment: 'miniteam', diocese_id: assignment.dioceseId }
+    : { assignment: assignment.kind, diocese_id: assignment.dioceseId }
   ).then(r => r.data)
 
 export const updateUserName = (uid: string, name: string) =>

@@ -1,4 +1,4 @@
-export type UserRole = 'participant' | 'leader' | 'miniteam' | 'admin'
+export type UserRole = 'participant' | 'leader' | 'miniteam' | 'malteser' | 'admin'
 export type AnnouncementPriority = 'info' | 'important' | 'critical'
 export type LocationType = 'venue' | 'water' | 'medical' | 'shade' | 'transport' | 'spiritual'
 export type EmergencyType = 'emergency' | 'lost' | 'unwell'

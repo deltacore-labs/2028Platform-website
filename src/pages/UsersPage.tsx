@@ -10,6 +10,7 @@ const roleLabel: Record<UserRole, string> = {
   participant: 'Teilnehmer',
   leader: 'Leiter',
   miniteam: 'Miniteam',
+  malteser: 'Malteser',
   admin: 'Admin',
 }
 
@@ -17,6 +18,7 @@ const roleBadge: Record<UserRole, string> = {
   participant: 'bg-surface-strong text-ink-warm',
   leader: 'bg-[#f0faf4] text-[#16a34a]',
   miniteam: 'bg-[#f5f0fa] text-[#7c3aed]',
+  malteser: 'bg-red-50 text-red-700',
   admin: 'bg-canvas-deep text-white',
 }
 
@@ -286,6 +288,7 @@ export function UsersPage() {
               <option value="leader">Leiter</option>
               <option value="participant">Teilnehmer</option>
               <option value="miniteam">Miniteam</option>
+              <option value="malteser">Malteser</option>
               {isAdmin && <option value="admin">Admin</option>}
             </select>
           </div>
@@ -348,6 +351,7 @@ export function UsersPage() {
           <option value="participant">Teilnehmer</option>
           <option value="leader">Leiter</option>
           <option value="miniteam">Miniteam</option>
+          <option value="malteser">Malteser</option>
           <option value="admin">Admin</option>
         </select>
         {isAdmin && (
@@ -474,6 +478,7 @@ export function UsersPage() {
                         <option value="participant">Teilnehmer</option>
                         <option value="leader">Leiter</option>
                         <option value="miniteam">Miniteam</option>
+                        <option value="malteser">Malteser</option>
                         {isAdmin && <option value="admin">Admin</option>}
                       </select>
                       <button

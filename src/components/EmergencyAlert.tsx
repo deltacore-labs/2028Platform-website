@@ -11,7 +11,7 @@ type BrowserWindow = Window & typeof globalThis & {
 
 export function EmergencyAlert() {
   const { appUser } = useAuth()
-  const canReceiveAlerts = appUser?.role === 'miniteam' || appUser?.role === 'admin'
+  const canReceiveAlerts = appUser?.role === 'malteser' || appUser?.role === 'miniteam' || appUser?.role === 'admin'
   const knownReportIds = useRef(new Set<string>())
   const hasInitialSnapshot = useRef(false)
   const audioContext = useRef<AudioContext | null>(null)

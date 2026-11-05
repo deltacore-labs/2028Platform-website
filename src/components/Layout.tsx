@@ -15,7 +15,7 @@ const navSections = [
     label: 'Arbeitsbereich',
     items: [
       { to: '/admin/overview', label: 'Übersicht', icon: 'overview', roles: ['miniteam', 'leader', 'admin'] },
-      { to: '/admin/emergency', label: 'Notfälle', icon: 'emergency', roles: ['miniteam', 'admin'] },
+      { to: '/admin/emergency', label: 'Notfälle', icon: 'emergency', roles: ['malteser', 'miniteam', 'admin'] },
     ],
   },
   {
@@ -38,6 +38,7 @@ const roleLabels = {
   participant: 'Teilnehmer',
   leader: 'Gruppenleitung',
   miniteam: 'Miniteam',
+  malteser: 'Malteser',
   admin: 'Administration',
 } as const
 
@@ -100,7 +101,7 @@ export function Layout() {
   const { appUser } = useAuth()
   const { pathname } = useLocation()
   const role = appUser?.role ?? 'participant'
-  const canSeeEmergencies = role === 'miniteam' || role === 'admin'
+  const canSeeEmergencies = role === 'malteser' || role === 'miniteam' || role === 'admin'
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { data: emergencyReports = [] } = useQuery({
     queryKey: ['emergency'],
@@ -168,7 +169,9 @@ export function Layout() {
             </div>
             <div className="min-w-0">
               <p className="font-display text-[21px] font-light leading-none text-ink">Rom 2028</p>
-              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">Administration</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                {role === 'malteser' ? 'Malteser Einsatz' : 'Administration'}
+              </p>
             </div>
           </div>
           <button
@@ -281,7 +284,9 @@ export function Layout() {
           </button>
           <div className="min-w-0">
             <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">Rom 2028</p>
-            <p className="truncate text-[15px] font-medium leading-tight text-ink">{currentItem?.label || 'Administration'}</p>
+            <p className="truncate text-[15px] font-medium leading-tight text-ink">
+              {currentItem?.label || (role === 'malteser' ? 'Malteser Einsatz' : 'Administration')}
+            </p>
           </div>
         </div>
 
