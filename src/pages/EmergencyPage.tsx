@@ -15,6 +15,13 @@ const typeIcon: Record<string, string> = {
   unwell: '○',
 }
 
+function formatReportTimestamp(timestamp: number): string {
+  const milliseconds = timestamp < 1_000_000_000_000
+    ? timestamp * 1000
+    : timestamp
+  return new Date(milliseconds).toLocaleString('de-DE')
+}
+
 export function EmergencyPage() {
   const queryClient = useQueryClient()
 
@@ -92,7 +99,7 @@ export function EmergencyPage() {
                         {r.reporterPhone}
                       </a>
                     )}
-                    {r.lat && r.lng && (
+                    {r.lat != null && r.lng != null && (
                       <a
                         href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
                         target="_blank"
@@ -103,7 +110,7 @@ export function EmergencyPage() {
                       </a>
                     )}
                     <p className="text-muted text-[13px] mt-2">
-                      {new Date(r.createdAt).toLocaleString('de-DE')}
+                      {formatReportTimestamp(r.createdAt)}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 shrink-0">

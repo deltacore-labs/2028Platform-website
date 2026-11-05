@@ -74,7 +74,7 @@ export interface EmergencyReport {
   lat: number | null
   lng: number | null
   status: EmergencyStatus
-  createdAt: string
+  createdAt: number
   assignedTo: string | null
 }
 

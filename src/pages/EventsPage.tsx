@@ -375,7 +375,7 @@ export function EventsPage() {
                       📍 {locations.find(location => location.id === ev.locationId)?.name ?? 'Ort'}
                     </span>
                   )}
-                  {(appUser?.role === 'admin' || ev.createdBy === appUser?.uid) && (
+                  {(appUser?.role === 'admin' || appUser?.role === 'miniteam' || ev.createdBy === appUser?.uid || (appUser?.role === 'leader' && ev.groupId !== null && ev.groupId === appUser?.groupId)) && (
                     <div className="flex gap-1 mt-1">
                       <button
                         onClick={() => startEdit(ev)}
