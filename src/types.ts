@@ -25,9 +25,11 @@ export interface Group {
   id: string
   name: string
   dioceseId: string | null
+  primaryLeaderId: string | null
   leaderId: string | null
   leaderName: string | null
   leaderPhone: string | null
+  leaderCount: number
 }
 
 export interface AppLocation {
@@ -44,6 +46,7 @@ export interface GroupMember {
   uid: string
   name: string
   phone: string | null
+  role: UserRole
 }
 
 export interface Announcement {
@@ -66,6 +69,7 @@ export interface EmergencyReport {
   reporterName: string
   reporterPhone: string | null
   groupId: string | null
+  dioceseId?: string | null
   lat: number | null
   lng: number | null
   status: EmergencyStatus

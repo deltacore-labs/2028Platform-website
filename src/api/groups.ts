@@ -16,6 +16,22 @@ export const updateGroup = (groupId: string, name: string, dioceseId?: string | 
     ...(dioceseId !== undefined ? { diocese_id: dioceseId } : {}),
   }).then(r => r.data)
 
+export const setPrimaryGroupLeader = (groupId: string, leaderId: string) =>
+  apiClient.put<{ groupId: string; primaryLeaderId: string; leaderName: string }>(
+    `/v1/groups/${groupId}/primary-leader`,
+    { leader_id: leaderId },
+  ).then(r => r.data)
+
+export const setGroupLeaderRole = (groupId: string, userId: string, assign: boolean) =>
+  apiClient.put<{
+    groupId: string
+    leaderId: string
+    role: 'leader' | 'participant'
+    primaryLeaderId: string | null
+  }>(`/v1/groups/${groupId}/leaders/${userId}`, {
+    action: assign ? 'assign' : 'remove',
+  }).then(r => r.data)
+
 export const deleteGroup = (groupId: string) =>
   apiClient.delete(`/v1/groups/${groupId}`).then(r => r.data)
 

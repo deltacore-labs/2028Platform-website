@@ -12,7 +12,6 @@ const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage').then(m 
 const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })))
 const GroupsPage = lazy(() => import('./pages/GroupsPage').then(m => ({ default: m.GroupsPage })))
 const EventsPage = lazy(() => import('./pages/EventsPage').then(m => ({ default: m.EventsPage })))
-const StrukturPage = lazy(() => import('./pages/StrukturPage').then(m => ({ default: m.StrukturPage })))
 const OverviewPage = lazy(() => import('./pages/OverviewPage').then(m => ({ default: m.OverviewPage })))
 const LegalPage = lazy(() => import('./pages/LegalPage').then(m => ({ default: m.LegalPage })))
 const LocationsPage = lazy(() => import('./pages/LocationsPage').then(m => ({ default: m.LocationsPage })))
@@ -74,14 +73,7 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="dioceses"
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <StrukturPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="dioceses" element={<Navigate to="/admin/overview" replace />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

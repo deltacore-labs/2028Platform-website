@@ -499,7 +499,9 @@ export function UsersPage() {
                   )}
                 </td>
                 <td className="px-5 py-3.5">
-                  {editingGroupUid === u.uid ? (
+                  {u.role === 'admin' ? (
+                    <span className="text-muted-soft italic text-[13px]">global</span>
+                  ) : editingGroupUid === u.uid ? (
                     <div className="flex items-center gap-2">
                       <select
                         autoFocus
@@ -543,7 +545,9 @@ export function UsersPage() {
                 </td>
                 {isAdmin && (
                   <td className="px-5 py-3.5">
-                    {editingDioceseUid === u.uid ? (
+                    {u.role === 'admin' ? (
+                      <span className="text-muted-soft italic text-[13px]">alle Bistümer</span>
+                    ) : editingDioceseUid === u.uid ? (
                       <div className="flex items-center gap-2">
                         <select
                           autoFocus

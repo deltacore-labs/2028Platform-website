@@ -22,7 +22,7 @@ import type { AppUser, Diocese, Group } from '../types'
 
 const ROOT_W = 196
 const NODE_W = 176
-const PERSON_W = 154
+const PERSON_W = 184
 const NODE_H = 72
 const PERSON_H = 58
 const LEVEL_GAP = 112
@@ -50,6 +50,9 @@ interface TreeNode {
   parentKey: string | null
   dioceseId?: string
   draggable?: boolean
+  groupId?: string
+  isLeader?: boolean
+  isPrimaryLeader?: boolean
 }
 
 interface Branch {
@@ -58,6 +61,8 @@ interface Branch {
   name: string
   dioceseId: string
   people: AppUser[]
+  primaryLeaderId: string | null
+  primaryLeaderName: string | null
 }
 
 export type OrganizationMove =
@@ -71,7 +76,14 @@ interface OrganizationTreeProps {
   dioceses: Diocese[]
   canEdit: boolean
   isMoving: boolean
+  rootLabel?: string
+  showEventRoot?: boolean
+  showMiniteam?: boolean
+  canSetPrimaryLeader?: boolean
+  canManageLeaders?: boolean
   onMove: (move: OrganizationMove) => void
+  onSetPrimaryLeader?: (groupId: string, leaderId: string) => void
+  onToggleLeader?: (groupId: string, userId: string, assign: boolean) => void
 }
 
 const roleLabel: Record<AppUser['role'], string> = {
@@ -85,7 +97,14 @@ function branchWidth(branch: Branch) {
   return Math.max(NODE_W, branch.people.length * PERSON_W + Math.max(0, branch.people.length - 1) * SIBLING_GAP)
 }
 
-function buildTree(users: AppUser[], groups: Group[], dioceses: Diocese[]) {
+function buildTree(
+  users: AppUser[],
+  groups: Group[],
+  dioceses: Diocese[],
+  rootLabel: string,
+  showEventRoot: boolean,
+  showMiniteam: boolean,
+) {
   const sortedDioceses = [...dioceses].sort((a, b) => a.sortOrder - b.sortOrder)
   const knownDioceses = new Set(dioceses.map(d => d.id))
   const orphanUsers = users.filter(user => !user.dioceseId || !knownDioceses.has(user.dioceseId))
@@ -117,15 +136,19 @@ function buildTree(users: AppUser[], groups: Group[], dioceses: Diocese[]) {
       name: group.name,
       dioceseId: entry.diocese.id,
       people: entry.people.filter(user => user.groupId === group.id),
+      primaryLeaderId: group.primaryLeaderId,
+      primaryLeaderName: group.leaderName,
     }))
 
-    if (!isOrphan) {
+    if (!isOrphan && showMiniteam) {
       branches.unshift({
         type: 'miniteam',
         id: `miniteam:${entry.diocese.id}`,
         name: 'Mini-Team',
         dioceseId: entry.diocese.id,
         people: entry.people.filter(user => user.role === 'miniteam' && !user.groupId),
+        primaryLeaderId: null,
+        primaryLeaderName: null,
       })
     }
 
@@ -139,6 +162,8 @@ function buildTree(users: AppUser[], groups: Group[], dioceses: Diocese[]) {
         name: 'Nicht zugeordnet',
         dioceseId: entry.diocese.id,
         people: unassignedPeople,
+        primaryLeaderId: null,
+        primaryLeaderName: null,
       })
     }
 
@@ -158,10 +183,10 @@ function buildTree(users: AppUser[], groups: Group[], dioceses: Diocese[]) {
       label: entry.diocese.name,
       sub: `${entry.people.length} ${entry.people.length === 1 ? 'Person' : 'Personen'}`,
       x: dioceseCenter - NODE_W / 2,
-      y: PAD + LEVEL_GAP,
+      y: PAD + (showEventRoot ? LEVEL_GAP : 0),
       width: NODE_W,
       height: NODE_H,
-      parentKey: 'root',
+      parentKey: showEventRoot ? 'root' : null,
       dioceseId: isOrphan ? undefined : entry.diocese.id,
     })
 
@@ -176,9 +201,11 @@ function buildTree(users: AppUser[], groups: Group[], dioceses: Diocese[]) {
         type: branch.type,
         entityId: branch.id,
         label: branch.name,
-        sub: `${branch.people.length} ${branch.people.length === 1 ? 'Person' : 'Personen'}`,
+        sub: branch.type === 'group' && branch.primaryLeaderName
+          ? `Hauptkontakt: ${branch.primaryLeaderName} · ${branch.people.length} Personen`
+          : `${branch.people.length} ${branch.people.length === 1 ? 'Person' : 'Personen'}`,
         x: center - NODE_W / 2,
-        y: PAD + 2 * LEVEL_GAP,
+        y: PAD + (showEventRoot ? 2 : 1) * LEVEL_GAP,
         width: NODE_W,
         height: NODE_H,
         parentKey: dioceseKey,
@@ -194,14 +221,17 @@ function buildTree(users: AppUser[], groups: Group[], dioceses: Diocese[]) {
           type: 'person',
           entityId: person.uid,
           label: person.name,
-          sub: roleLabel[person.role],
+          sub: person.uid === branch.primaryLeaderId ? 'Hauptansprechpartner' : roleLabel[person.role],
           x: personX,
-          y: PAD + 3 * LEVEL_GAP,
+          y: PAD + (showEventRoot ? 3 : 2) * LEVEL_GAP,
           width: PERSON_W,
           height: PERSON_H,
           parentKey: branchKey,
           dioceseId: isOrphan ? undefined : branch.dioceseId,
           draggable: person.role !== 'admin',
+          groupId: branch.type === 'group' ? branch.id : undefined,
+          isLeader: person.role === 'leader',
+          isPrimaryLeader: person.uid === branch.primaryLeaderId,
         })
         personX += PERSON_W + SIBLING_GAP
       }
@@ -213,23 +243,25 @@ function buildTree(users: AppUser[], groups: Group[], dioceses: Diocese[]) {
   const rootCenter = dioceseCenters.length > 0
     ? (Math.min(...dioceseCenters) + Math.max(...dioceseCenters)) / 2
     : PAD + ROOT_W / 2
-  nodes.unshift({
-    key: 'root',
-    type: 'root',
-    entityId: 'root',
-    label: 'Rom 2028 Pilgerfahrt',
-    sub: `${users.length} ${users.length === 1 ? 'Person' : 'Personen'} gesamt`,
-    x: rootCenter - ROOT_W / 2,
-    y: PAD,
-    width: ROOT_W,
-    height: NODE_H,
-    parentKey: null,
-  })
+  if (showEventRoot) {
+    nodes.unshift({
+      key: 'root',
+      type: 'root',
+      entityId: 'root',
+      label: rootLabel,
+      sub: `${users.length} ${users.length === 1 ? 'Person' : 'Personen'} gesamt`,
+      x: rootCenter - ROOT_W / 2,
+      y: PAD,
+      width: ROOT_W,
+      height: NODE_H,
+      parentKey: null,
+    })
+  }
 
   return {
     nodes,
-    totalW: Math.max(cursorX - DIOCESE_GAP + PAD, ROOT_W + PAD * 2),
-    totalH: PAD * 2 + LEVEL_GAP * 3 + PERSON_H,
+    totalW: Math.max(cursorX - DIOCESE_GAP + PAD, (showEventRoot ? ROOT_W : NODE_W) + PAD * 2),
+    totalH: PAD * 2 + LEVEL_GAP * (showEventRoot ? 3 : 2) + PERSON_H,
   }
 }
 
@@ -251,7 +283,23 @@ function DropNode({ node, activeType, canEdit }: { node: TreeNode; activeType: D
   return <NodeCard node={node} refCallback={setNodeRef} isDropTarget={isOver && accepts} />
 }
 
-function DraggableNode({ node, canEdit, activeType }: { node: TreeNode; canEdit: boolean; activeType: DragItem['type'] | null }) {
+function DraggableNode({
+  node,
+  canEdit,
+  activeType,
+  canSetPrimaryLeader,
+  canManageLeaders,
+  onSetPrimaryLeader,
+  onToggleLeader,
+}: {
+  node: TreeNode
+  canEdit: boolean
+  activeType: DragItem['type'] | null
+  canSetPrimaryLeader: boolean
+  canManageLeaders: boolean
+  onSetPrimaryLeader?: (groupId: string, leaderId: string) => void
+  onToggleLeader?: (groupId: string, userId: string, assign: boolean) => void
+}) {
   const dragItem: DragItem = { type: node.type === 'group' ? 'group' : 'person', id: node.entityId }
   const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
     id: `drag:${node.key}`,
@@ -279,6 +327,8 @@ function DraggableNode({ node, canEdit, activeType }: { node: TreeNode; canEdit:
       isDropTarget={isOver && activeType === 'person'}
       dragAttributes={attributes}
       dragListeners={listeners}
+      onSetPrimaryLeader={canSetPrimaryLeader ? onSetPrimaryLeader : undefined}
+      onToggleLeader={canManageLeaders ? onToggleLeader : undefined}
     />
   )
 }
@@ -291,6 +341,8 @@ function NodeCard({
   isDropTarget = false,
   dragAttributes,
   dragListeners,
+  onSetPrimaryLeader,
+  onToggleLeader,
   overlay = false,
 }: {
   node: TreeNode
@@ -300,6 +352,8 @@ function NodeCard({
   isDropTarget?: boolean
   dragAttributes?: DraggableAttributes
   dragListeners?: DraggableSyntheticListeners
+  onSetPrimaryLeader?: (groupId: string, leaderId: string) => void
+  onToggleLeader?: (groupId: string, userId: string, assign: boolean) => void
   overlay?: boolean
 }) {
   const dark = node.type === 'root'
@@ -331,6 +385,34 @@ function NodeCard({
           {node.sub}
         </p>
       </div>
+      {node.groupId && onToggleLeader && (
+        <button
+          type="button"
+          onClick={() => onToggleLeader(node.groupId!, node.entityId, !node.isLeader)}
+          className={`ml-1 grid h-8 min-w-7 shrink-0 place-items-center rounded-lg px-1 text-[10px] font-bold transition-colors ${
+            node.isLeader
+              ? 'bg-[#f0faf4] text-[#15803d] hover:bg-red-50 hover:text-[#dc2626]'
+              : 'text-muted-soft hover:bg-[#f0faf4] hover:text-[#15803d]'
+          }`}
+          aria-label={node.isLeader ? `${node.label} die Leiterrolle entziehen` : `${node.label} zum Leiter machen`}
+          title={node.isLeader ? 'Leiterrolle entfernen' : 'Zum Leiter machen'}
+        >
+          {node.isLeader ? 'L−' : 'L+'}
+        </button>
+      )}
+      {node.isLeader && node.groupId && onSetPrimaryLeader && (
+        <button
+          type="button"
+          onClick={() => onSetPrimaryLeader(node.groupId!, node.entityId)}
+          className={`ml-1 grid h-9 w-8 shrink-0 place-items-center rounded-lg text-[17px] transition-colors ${
+            node.isPrimaryLeader ? 'text-amber-500' : 'text-muted-soft hover:bg-amber-50 hover:text-amber-500'
+          }`}
+          aria-label={`${node.label} als Hauptansprechpartner festlegen`}
+          title={node.isPrimaryLeader ? 'Hauptansprechpartner' : 'Als Hauptansprechpartner festlegen'}
+        >
+          {node.isPrimaryLeader ? '★' : '☆'}
+        </button>
+      )}
       {dragListeners && (
         <button
           type="button"
@@ -355,8 +437,25 @@ const collisionDetection: CollisionDetection = args => {
   return closestCenter(args)
 }
 
-export function OrganizationTree({ users, groups, dioceses, canEdit, isMoving, onMove }: OrganizationTreeProps) {
-  const { nodes, totalW, totalH } = useMemo(() => buildTree(users, groups, dioceses), [users, groups, dioceses])
+export function OrganizationTree({
+  users,
+  groups,
+  dioceses,
+  canEdit,
+  isMoving,
+  rootLabel = 'Rom 2028 Pilgerfahrt',
+  showEventRoot = true,
+  showMiniteam = true,
+  canSetPrimaryLeader = false,
+  canManageLeaders = false,
+  onMove,
+  onSetPrimaryLeader,
+  onToggleLeader,
+}: OrganizationTreeProps) {
+  const { nodes, totalW, totalH } = useMemo(
+    () => buildTree(users, groups, dioceses, rootLabel, showEventRoot, showMiniteam),
+    [users, groups, dioceses, rootLabel, showEventRoot, showMiniteam],
+  )
   const nodeMap = useMemo(() => new Map(nodes.map(node => [node.key, node])), [nodes])
   const [active, setActive] = useState<DragItem | null>(null)
   const sensors = useSensors(
@@ -433,7 +532,18 @@ export function OrganizationTree({ users, groups, dioceses, canEdit, isMoving, o
           {nodes.map(node => node.type === 'root' || node.type === 'unassigned'
             ? <NodeCard key={node.key} node={node} />
             : node.type === 'person' || node.type === 'group'
-              ? <DraggableNode key={node.key} node={node} canEdit={canEdit && !isMoving} activeType={active?.type ?? null} />
+              ? (
+                  <DraggableNode
+                    key={node.key}
+                    node={node}
+                    canEdit={canEdit && !isMoving}
+                    activeType={active?.type ?? null}
+                    canSetPrimaryLeader={canSetPrimaryLeader && !isMoving}
+                    canManageLeaders={canManageLeaders && !isMoving}
+                    onSetPrimaryLeader={onSetPrimaryLeader}
+                    onToggleLeader={onToggleLeader}
+                  />
+                )
               : <DropNode key={node.key} node={node} activeType={active?.type ?? null} canEdit={canEdit && !isMoving} />
           )}
         </div>

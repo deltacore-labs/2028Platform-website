@@ -8,6 +8,8 @@ import {
   createGroup,
   updateGroup,
   deleteGroup,
+  setGroupLeaderRole,
+  setPrimaryGroupLeader,
 } from '../api/groups'
 import { useAuth } from '../context/AuthContext'
 import { fetchDioceses } from '../api/dioceses'
@@ -33,6 +35,7 @@ export function GroupsPage() {
   const { appUser } = useAuth()
   const isPrivileged = appUser?.role === 'miniteam' || appUser?.role === 'admin'
   const isAdmin = appUser?.role === 'admin'
+  const canSetPrimaryLeader = isPrivileged || appUser?.role === 'leader'
 
   const { data: groups = [], isLoading } = useQuery({
     queryKey: ['groups'],
@@ -89,6 +92,23 @@ export function GroupsPage() {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       setConfirmDeleteId(null)
       if (expandedGroupId === id) setExpandedGroupId(null)
+    },
+  })
+
+  const leaderRoleMutation = useMutation({
+    mutationFn: ({ groupId, userId, assign }: { groupId: string; userId: string; assign: boolean }) =>
+      setGroupLeaderRole(groupId, userId, assign),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', expandedGroupId] })
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
+    },
+  })
+
+  const primaryLeaderMutation = useMutation({
+    mutationFn: ({ groupId, leaderId }: { groupId: string; leaderId: string }) =>
+      setPrimaryGroupLeader(groupId, leaderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] })
     },
   })
 
@@ -252,7 +272,9 @@ export function GroupsPage() {
                       · {dioceses.find(d => d.id === g.dioceseId)?.name ?? (g.dioceseId || 'Bistum fehlt')}
                     </span>
                     {g.leaderName && (
-                      <span className="text-muted text-[14px] ml-2">· {g.leaderName}</span>
+                      <span className="text-muted text-[14px] ml-2">
+                        · ★ {g.leaderName}{g.leaderCount > 1 ? ` +${g.leaderCount - 1}` : ''}
+                      </span>
                     )}
                     {g.leaderPhone && (
                       <a
@@ -291,24 +313,65 @@ export function GroupsPage() {
               <div className="border-t border-hairline px-5 py-4 space-y-5">
                 {/* Members */}
                 <div>
-                  <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted mb-3">
-                    Mitglieder
-                  </p>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">
+                      Mitglieder und Leitung
+                    </p>
+                    {g.leaderCount > 0 && (
+                      <span className="text-[12px] text-muted">
+                        {g.leaderCount} {g.leaderCount === 1 ? 'Leitungsperson' : 'Leitungspersonen'}
+                      </span>
+                    )}
+                  </div>
+                  {(leaderRoleMutation.error || primaryLeaderMutation.error) && (
+                    <p role="alert" className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-[#dc2626]">
+                      {((leaderRoleMutation.error || primaryLeaderMutation.error) as Error).message}
+                    </p>
+                  )}
                   {members.length === 0 ? (
                     <p className="text-muted text-[14px]">Keine Mitglieder</p>
                   ) : (
                     <ul className="space-y-2">
                       {members.map(m => (
-                        <li key={m.uid} className="flex items-center justify-between">
-                          <span className="text-body text-[15px]">{m.name}</span>
-                          {m.phone && (
-                            <a
-                              href={`tel:${m.phone}`}
-                              className="text-ink-warm text-[13px] hover:underline underline-offset-2"
-                            >
-                              {m.phone}
-                            </a>
-                          )}
+                        <li key={m.uid} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-canvas px-3 py-2.5">
+                          <div className="min-w-0">
+                            <span className="text-body text-[15px]">{m.name}</span>
+                            {m.role === 'leader' && (
+                              <span className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${g.primaryLeaderId === m.uid ? 'bg-[#fef3c7] text-[#92400e]' : 'bg-[#dcfce7] text-[#166534]'}`}>
+                                {g.primaryLeaderId === m.uid ? '★ Hauptansprechpartner' : 'Leiter'}
+                              </span>
+                            )}
+                            {m.phone && (
+                              <a
+                                href={`tel:${m.phone}`}
+                                className="ml-2 text-ink-warm text-[13px] hover:underline underline-offset-2"
+                              >
+                                {m.phone}
+                              </a>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {canSetPrimaryLeader && m.role === 'leader' && g.primaryLeaderId !== m.uid && (
+                              <button
+                                type="button"
+                                onClick={() => primaryLeaderMutation.mutate({ groupId: g.id, leaderId: m.uid })}
+                                disabled={primaryLeaderMutation.isPending || leaderRoleMutation.isPending}
+                                className="rounded-pill border border-[#fde68a] bg-[#fffbeb] px-3 py-1 text-[12px] font-medium text-[#92400e] hover:bg-[#fef3c7] disabled:opacity-50"
+                              >
+                                Als Hauptkontakt
+                              </button>
+                            )}
+                            {isPrivileged && (
+                              <button
+                                type="button"
+                                onClick={() => leaderRoleMutation.mutate({ groupId: g.id, userId: m.uid, assign: m.role !== 'leader' })}
+                                disabled={leaderRoleMutation.isPending || primaryLeaderMutation.isPending}
+                                className="rounded-pill border border-hairline-strong bg-surface px-3 py-1 text-[12px] font-medium text-body hover:bg-canvas-deep disabled:opacity-50"
+                              >
+                                {m.role === 'leader' ? 'Leitung entfernen' : 'Zum Leiter machen'}
+                              </button>
+                            )}
+                          </div>
                         </li>
                       ))}
                     </ul>

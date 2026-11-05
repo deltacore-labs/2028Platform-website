@@ -13,7 +13,6 @@ const navItems = [
   { to: '/admin/locations', label: 'Orte', icon: '⌖', roles: ['miniteam', 'admin'] },
   { to: '/admin/users', label: 'Nutzer', icon: '◈', roles: ['miniteam', 'admin'] },
   { to: '/admin/groups', label: 'Gruppen', icon: '◉', roles: ['miniteam', 'admin'] },
-  { to: '/admin/dioceses', label: 'Struktur', icon: '◇', roles: ['admin'] },
 ] as const
 
 export function Layout() {
