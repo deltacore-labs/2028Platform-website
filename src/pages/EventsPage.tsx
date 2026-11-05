@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchEvents, createEvent, updateEvent, deleteEvent } from '../api/events'
 import { fetchGroups } from '../api/groups'
 import { fetchLocations } from '../api/locations'
+import { LocationPicker, type EventLocation } from '../components/LocationPicker'
 import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../types'
 
@@ -48,7 +49,7 @@ export function EventsPage() {
   const [endDate, setEndDate] = useState(defaultDatetime(1))
   const [targetRoles, setTargetRoles] = useState<UserRole[]>([])
   const [targetGroupId, setTargetGroupId] = useState('')
-  const [locationId, setLocationId] = useState('')
+  const [eventLocation, setEventLocation] = useState<EventLocation | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -79,19 +80,21 @@ export function EventsPage() {
         end_date: toUnix(endDate),
         target_roles: targetRoles.length > 0 ? targetRoles : undefined,
         group_id: targetGroupId || undefined,
-        location_id: locationId || undefined,
       }
-      return editingId ? updateEvent(editingId, payload) : createEvent(payload)
+      return editingId
+        ? updateEvent(editingId, { ...payload, location: eventLocation })
+        : createEvent({ ...payload, location: eventLocation ?? undefined })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] })
+      queryClient.invalidateQueries({ queryKey: ['locations'] })
       setTitle('')
       setDescription('')
       setStartDate(defaultDatetime())
       setEndDate(defaultDatetime(1))
       setTargetRoles([])
       setTargetGroupId('')
-      setLocationId('')
+      setEventLocation(null)
       setShowForm(false)
       setEditingId(null)
     },
@@ -111,7 +114,7 @@ export function EventsPage() {
     setEndDate(defaultDatetime(1))
     setTargetRoles([])
     setTargetGroupId('')
-    setLocationId('')
+    setEventLocation(null)
   }
 
   function startEdit(event: typeof events[number]) {
@@ -122,7 +125,8 @@ export function EventsPage() {
     setEndDate(toLocalDatetime(event.endDate))
     try { setTargetRoles(JSON.parse(event.targetRoles)) } catch { setTargetRoles([]) }
     setTargetGroupId(event.groupId ?? '')
-    setLocationId(event.locationId ?? '')
+    const location = locations.find(item => item.id === event.locationId)
+    setEventLocation(location ? { name: location.name, lat: location.lat, lng: location.lng } : null)
     setShowForm(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -250,17 +254,8 @@ export function EventsPage() {
             <label className="block text-[13px] font-medium text-body mb-1.5">
               Ort <span className="text-muted font-normal">(optional)</span>
             </label>
-            <select
-              value={locationId}
-              onChange={e => setLocationId(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">Kein Ort</option>
-              {locations.map(location => (
-                <option key={location.id} value={location.id}>{location.name}</option>
-              ))}
-            </select>
-            <p className="text-[12px] text-muted mt-1.5">Der Ort wird in der App beim Öffnen der Veranstaltung auf einer Karte angezeigt.</p>
+            <LocationPicker key={editingId ?? 'new'} value={eventLocation} onChange={setEventLocation} />
+            <p className="text-[12px] text-muted mt-1.5">Der ausgewählte Punkt wird in der App beim Öffnen der Veranstaltung auf einer Karte angezeigt.</p>
           </div>
 
           <div>

@@ -12,6 +12,7 @@ export const createEvent = (payload: {
   target_roles?: UserRole[]
   group_id?: string
   location_id?: string
+  location?: { name: string; lat: number; lng: number }
 }) => apiClient.post<AppEvent>('/v1/events', payload).then(r => r.data)
 
 export const updateEvent = (id: string, payload: {
@@ -21,7 +22,8 @@ export const updateEvent = (id: string, payload: {
   end_date: number
   target_roles?: UserRole[]
   group_id?: string
-  location_id?: string
+  location_id?: string | null
+  location?: { name: string; lat: number; lng: number } | null
 }) => apiClient.put<AppEvent>(`/v1/events/${id}`, payload).then(r => r.data)
 
 export const deleteEvent = (id: string) =>

@@ -62,6 +62,32 @@
     overscroll-behavior: contain;
   }
 
+  .event-location-pin {
+    display: block;
+    width: 32px;
+    height: 32px;
+    border: 3px solid #fff;
+    border-radius: 50% 50% 50% 0;
+    background: #7c2d12;
+    box-shadow: 0 3px 10px rgb(12 10 9 / 28%);
+    transform: rotate(-45deg);
+  }
+
+  .event-location-pin::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    background: #fff;
+  }
+
+  .leaflet-marker-icon {
+    touch-action: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .admin-sidebar {
       transition-duration: 0ms;

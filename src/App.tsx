@@ -14,7 +14,6 @@ const GroupsPage = lazy(() => import('./pages/GroupsPage').then(m => ({ default:
 const EventsPage = lazy(() => import('./pages/EventsPage').then(m => ({ default: m.EventsPage })))
 const OverviewPage = lazy(() => import('./pages/OverviewPage').then(m => ({ default: m.OverviewPage })))
 const LegalPage = lazy(() => import('./pages/LegalPage').then(m => ({ default: m.LegalPage })))
-const LocationsPage = lazy(() => import('./pages/LocationsPage').then(m => ({ default: m.LocationsPage })))
 
 const queryClient = new QueryClient()
 
@@ -49,14 +48,7 @@ export default function App() {
               />
               <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="events" element={<EventsPage />} />
-              <Route
-                path="locations"
-                element={
-                  <ProtectedRoute requiredRole="miniteam">
-                    <LocationsPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="locations" element={<Navigate to="/admin/events" replace />} />
               <Route
                 path="users"
                 element={

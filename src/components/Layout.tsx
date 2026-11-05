@@ -21,7 +21,6 @@ const navSections = [
     items: [
       { to: '/admin/announcements', label: 'Ankündigungen', icon: 'announcements', roles: ['miniteam', 'leader', 'admin'] },
       { to: '/admin/events', label: 'Veranstaltungen', icon: 'events', roles: ['miniteam', 'leader', 'admin'] },
-      { to: '/admin/locations', label: 'Orte', icon: 'locations', roles: ['miniteam', 'admin'] },
     ],
   },
   {
