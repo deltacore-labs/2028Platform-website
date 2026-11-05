@@ -19,6 +19,10 @@
     overscroll-behavior: none;
   }
 
+  #root {
+    min-height: 100dvh;
+  }
+
   input, textarea, select {
     font-size: 16px;
   }
@@ -52,5 +56,15 @@
   }
   .tracking-editorial {
     letter-spacing: 0.16px;
+  }
+
+  .admin-sidebar {
+    overscroll-behavior: contain;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .admin-sidebar {
+      transition-duration: 0ms;
+    }
   }
 }
