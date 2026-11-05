@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { signOut } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { useAuth } from '../context/AuthContext'
+import { EmergencyAlert } from './EmergencyAlert'
 import { ForcePasswordChange } from './ForcePasswordChange'
 
 type IconName = 'overview' | 'emergency' | 'announcements' | 'events' | 'locations' | 'users' | 'groups'
@@ -132,6 +133,8 @@ export function Layout() {
 
   return (
     <div className="flex min-h-dvh bg-canvas">
+      <EmergencyAlert />
+
       <button
         type="button"
         className={`fixed inset-0 z-20 bg-ink/25 backdrop-blur-[2px] transition-opacity duration-200 md:hidden ${

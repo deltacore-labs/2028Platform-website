@@ -67,4 +67,30 @@
       transition-duration: 0ms;
     }
   }
+
+  .emergency-flash {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    background-color: rgb(220 38 38 / 48%);
+    opacity: 0;
+    animation: emergency-flash 1.44s linear both;
+  }
+
+  @keyframes emergency-flash {
+    0%, 28%, 61%, 94%, 100% { opacity: 0; }
+    11%, 44%, 77% { opacity: 1; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .emergency-flash {
+      animation: emergency-flash-reduced 600ms cubic-bezier(0.23, 1, 0.32, 1) both;
+    }
+  }
+
+  @keyframes emergency-flash-reduced {
+    0%, 100% { opacity: 0; }
+    20%, 65% { opacity: 0.45; }
+  }
 }

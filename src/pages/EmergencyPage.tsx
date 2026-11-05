@@ -22,6 +22,14 @@ function formatReportTimestamp(timestamp: number): string {
   return new Date(milliseconds).toLocaleString('de-DE')
 }
 
+function emergencyMapUrl(lat: number, lng: number): string {
+  const offset = 0.004
+  const bbox = [lng - offset, lat - offset, lng + offset, lat + offset]
+    .map(value => value.toFixed(6))
+    .join('%2C')
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`
+}
+
 export function EmergencyPage() {
   const queryClient = useQueryClient()
 
@@ -99,15 +107,33 @@ export function EmergencyPage() {
                         {r.reporterPhone}
                       </a>
                     )}
-                    {r.lat != null && r.lng != null && (
-                      <a
-                        href={`https://www.google.com/maps?q=${r.lat},${r.lng}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block text-ink-warm text-[13px] mt-1 hover:underline underline-offset-2"
-                      >
-                        Standort anzeigen ↗
-                      </a>
+                    {r.lat != null && r.lng != null ? (
+                      <div className="mt-4 overflow-hidden rounded-xl border border-hairline bg-white">
+                        <iframe
+                          title={`Notfallstandort von ${r.reporterName}`}
+                          src={emergencyMapUrl(r.lat, r.lng)}
+                          className="block h-48 w-full border-0"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5">
+                          <span className="text-muted text-[12px] tabular-nums">
+                            {r.lat.toFixed(5)}, {r.lng.toFixed(5)}
+                          </span>
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-ink-warm text-[13px] font-medium hover:underline underline-offset-2"
+                          >
+                            In Google Maps öffnen ↗
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-3 rounded-lg bg-[#f5f5f4] px-3 py-2 text-muted text-[12px]">
+                        Kein Standort vom Gerät übertragen
+                      </p>
                     )}
                     <p className="text-muted text-[13px] mt-2">
                       {formatReportTimestamp(r.createdAt)}
