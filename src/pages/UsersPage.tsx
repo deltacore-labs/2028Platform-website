@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchAllUsers, updateUserRole, updateUserGroup, updateUserDiocese, updateUserName, createUser, deleteUser, setUserBlocked, resetUserPassword } from '../api/users'
+import { fetchAllUsers, updateUserRole, updateUserGroup, updateUserDiocese, updateUserName, createUser, deleteUser, setUserBlocked, setUserContactVisibility, resetUserPassword } from '../api/users'
 import { fetchGroups } from '../api/groups'
 import { fetchDioceses } from '../api/dioceses'
 import { useAuth } from '../context/AuthContext'
@@ -146,6 +146,13 @@ export function UsersPage() {
 
   const blockMutation = useMutation({
     mutationFn: ({ uid, blocked }: { uid: string; blocked: boolean }) => setUserBlocked(uid, blocked),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+    onError: (err: Error) => setActionError(err.message),
+  })
+
+  const contactVisibilityMutation = useMutation({
+    mutationFn: ({ uid, visible }: { uid: string; visible: boolean }) =>
+      setUserContactVisibility(uid, visible),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
     onError: (err: Error) => setActionError(err.message),
   })
@@ -397,7 +404,7 @@ export function UsersPage() {
 
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-hairline">
-        <div className="bg-surface min-w-[600px]">
+        <div className="bg-surface min-w-[760px]">
           <table className="w-full text-[14px]">
           <thead>
             <tr className="border-b border-hairline">
@@ -407,6 +414,7 @@ export function UsersPage() {
               {isAdmin && (
                 <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Bistum</th>
               )}
+              <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Kontakte</th>
               <th className="text-left px-5 py-3 text-[11px] font-semibold tracking-[0.8px] uppercase text-muted">Aktionen</th>
             </tr>
           </thead>
@@ -596,6 +604,20 @@ export function UsersPage() {
                   </td>
                 )}
                 <td className="px-5 py-3.5">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={u.showInContacts}
+                    aria-label={`${u.name} in der Kontaktliste anzeigen`}
+                    title={u.phone ? (u.showInContacts ? 'Aus Kontaktliste entfernen' : 'In Kontaktliste anzeigen') : 'Zuerst Telefonnummer im App-Profil hinterlegen'}
+                    disabled={!u.phone || contactVisibilityMutation.isPending}
+                    onClick={() => contactVisibilityMutation.mutate({ uid: u.uid, visible: !u.showInContacts })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${u.showInContacts ? 'bg-[#16a34a]' : 'bg-hairline-strong'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${u.showInContacts ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </td>
+                <td className="px-5 py-3.5">
                   <div className="flex gap-1.5">
                     {/* Reset password */}
                     {resetSuccessUid === u.uid ? (
@@ -655,7 +677,7 @@ export function UsersPage() {
             ))}
             {filtered.length === 0 && !isLoading && (
               <tr>
-                <td colSpan={isAdmin ? 5 : 4} className="px-5 py-6 text-muted text-[14px] text-center">
+                <td colSpan={isAdmin ? 6 : 5} className="px-5 py-6 text-muted text-[14px] text-center">
                   Keine Nutzer gefunden.
                 </td>
               </tr>

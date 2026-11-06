@@ -12,6 +12,7 @@ type ApiUser = {
   matrix_username: string | null
   has_account: boolean
   blocked: number
+  show_in_contacts: boolean
 }
 
 export type CreateUserResult = {
@@ -41,6 +42,7 @@ export const fetchAllUsers = () =>
       fcmToken: null,
       mustChangePassword: 0,
       blocked: u.blocked ?? 0,
+      showInContacts: u.show_in_contacts ?? false,
       createdAt: '',
       updatedAt: '',
     }) as AppUser)
@@ -95,6 +97,7 @@ export const createPersonWithoutAccount = (name: string, dioceseId: string, phon
     fcmToken: null,
     mustChangePassword: 0,
     blocked: 0,
+    showInContacts: false,
     createdAt: '',
     updatedAt: '',
   } as AppUser))
@@ -104,6 +107,9 @@ export const deleteUser = (uid: string): Promise<void> =>
 
 export const setUserBlocked = (uid: string, blocked: boolean) =>
   apiClient.put(`/v1/users/${uid}/blocked`, { blocked }).then(r => r.data)
+
+export const setUserContactVisibility = (uid: string, visible: boolean) =>
+  apiClient.put(`/v1/users/${uid}/contact-visibility`, { visible }).then(r => r.data)
 
 export const resetUserPassword = (uid: string) =>
   apiClient.post(`/v1/users/${uid}/reset-password`).then(r => r.data)

@@ -18,6 +18,7 @@ export interface AppUser {
   fcmToken: string | null
   mustChangePassword: number
   blocked: number
+  showInContacts: boolean
   createdAt: string
   updatedAt: string
 }
@@ -91,6 +92,7 @@ export interface AppEvent {
   endDate: number
   locationId: string | null
   targetRoles: string  // JSON string from DB — parse before use
+  targetGroupIds: string // JSON string from DB — parse before use
   groupId: string | null
   createdBy: string
   createdAt: number

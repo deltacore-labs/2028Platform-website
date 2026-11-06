@@ -48,7 +48,8 @@ export function EventsPage() {
   const [startDate, setStartDate] = useState(defaultDatetime())
   const [endDate, setEndDate] = useState(defaultDatetime(1))
   const [targetRoles, setTargetRoles] = useState<UserRole[]>([])
-  const [targetGroupId, setTargetGroupId] = useState('')
+  const [targetAudience, setTargetAudience] = useState<'all' | 'groups'>('all')
+  const [targetGroupIds, setTargetGroupIds] = useState<string[]>([])
   const [eventLocation, setEventLocation] = useState<EventLocation | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -79,7 +80,7 @@ export function EventsPage() {
         start_date: toUnix(startDate),
         end_date: toUnix(endDate),
         target_roles: targetRoles.length > 0 ? targetRoles : undefined,
-        group_id: targetGroupId || undefined,
+        target_group_ids: targetAudience === 'groups' ? targetGroupIds : [],
       }
       return editingId
         ? updateEvent(editingId, { ...payload, location: eventLocation })
@@ -93,7 +94,8 @@ export function EventsPage() {
       setStartDate(defaultDatetime())
       setEndDate(defaultDatetime(1))
       setTargetRoles([])
-      setTargetGroupId('')
+      setTargetAudience('all')
+      setTargetGroupIds([])
       setEventLocation(null)
       setShowForm(false)
       setEditingId(null)
@@ -113,7 +115,8 @@ export function EventsPage() {
     setStartDate(defaultDatetime())
     setEndDate(defaultDatetime(1))
     setTargetRoles([])
-    setTargetGroupId('')
+    setTargetAudience('all')
+    setTargetGroupIds([])
     setEventLocation(null)
   }
 
@@ -124,7 +127,11 @@ export function EventsPage() {
     setStartDate(toLocalDatetime(event.startDate))
     setEndDate(toLocalDatetime(event.endDate))
     try { setTargetRoles(JSON.parse(event.targetRoles)) } catch { setTargetRoles([]) }
-    setTargetGroupId(event.groupId ?? '')
+    const eventGroupIds = (() => {
+      try { return JSON.parse(event.targetGroupIds) as string[] } catch { return event.groupId ? [event.groupId] : [] }
+    })()
+    setTargetAudience(eventGroupIds.length > 0 ? 'groups' : 'all')
+    setTargetGroupIds(eventGroupIds)
     const location = locations.find(item => item.id === event.locationId)
     setEventLocation(location ? { name: location.name, lat: location.lat, lng: location.lng } : null)
     setShowForm(true)
@@ -141,11 +148,22 @@ export function EventsPage() {
     )
   }
 
+  function toggleGroup(groupId: string) {
+    setTargetGroupIds(prev =>
+      prev.includes(groupId) ? prev.filter(id => id !== groupId) : [...prev, groupId],
+    )
+  }
+
   const sortedEvents = [...events].sort((a, b) => a.startDate - b.startDate)
 
   const filtered = sortedEvents.filter(ev => {
     if (search && !ev.title.toLowerCase().includes(search.toLowerCase())) return false
-    if (filterGroup && ev.groupId !== filterGroup) return false
+    if (filterGroup) {
+      const groupIds: string[] = (() => {
+        try { return JSON.parse(ev.targetGroupIds) } catch { return ev.groupId ? [ev.groupId] : [] }
+      })()
+      if (!groupIds.includes(filterGroup)) return false
+    }
     if (filterRole) {
       const roles: string[] = (() => { try { return JSON.parse(ev.targetRoles) } catch { return [] } })()
       if (roles.length > 0 && !roles.includes(filterRole)) return false
@@ -258,25 +276,40 @@ export function EventsPage() {
             <p className="text-[12px] text-muted mt-1.5">Der ausgewählte Punkt wird in der App beim Öffnen der Veranstaltung auf einer Karte angezeigt.</p>
           </div>
 
-          <div>
-            <label className="block text-[13px] font-medium text-body mb-1.5">
-              Gruppe <span className="text-muted font-normal">(optional)</span>
-            </label>
-            <select
-              value={targetGroupId}
-              onChange={e => setTargetGroupId(e.target.value)}
-              className="bg-surface text-ink rounded-lg px-4 py-3 border border-hairline-strong text-[15px] focus:outline-none focus:border-ink transition-colors"
-            >
-              <option value="">Alle Gruppen</option>
-              {groups.map(g => (
-                <option key={g.id} value={g.id}>{g.name}</option>
+          <fieldset>
+            <legend className="block text-[13px] font-medium text-body mb-2">Sichtbar für</legend>
+            <div className="inline-flex rounded-lg border border-hairline-strong bg-canvas p-1">
+              {([['all', 'Alle Gruppen'], ['groups', 'Einzelne Gruppen']] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setTargetAudience(value)}
+                  className={`rounded-md px-4 py-2 text-[14px] font-medium transition-colors ${targetAudience === value ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'}`}
+                >
+                  {label}
+                </button>
               ))}
-            </select>
-          </div>
+            </div>
+            {targetAudience === 'groups' && (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {groups.map(group => (
+                  <label key={group.id} className="flex cursor-pointer items-center gap-2 rounded-lg border border-hairline px-3 py-2.5 text-[14px] text-body hover:bg-canvas-soft">
+                    <input
+                      type="checkbox"
+                      checked={targetGroupIds.includes(group.id)}
+                      onChange={() => toggleGroup(group.id)}
+                      className="rounded"
+                    />
+                    {group.name}
+                  </label>
+                ))}
+              </div>
+            )}
+          </fieldset>
 
           <button
             onClick={() => createMutation.mutate()}
-            disabled={title.trim().length < 2 || !startDate || !endDate || createMutation.isPending}
+            disabled={title.trim().length < 2 || !startDate || !endDate || (targetAudience === 'groups' && targetGroupIds.length === 0) || createMutation.isPending}
             className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors"
           >
             {createMutation.isPending ? 'Speichern…' : editingId ? 'Änderungen speichern' : 'Speichern'}
@@ -334,6 +367,9 @@ export function EventsPage() {
           const roles: string[] = (() => {
             try { return JSON.parse(ev.targetRoles) } catch { return [] }
           })()
+          const eventGroupIds: string[] = (() => {
+            try { return JSON.parse(ev.targetGroupIds) } catch { return ev.groupId ? [ev.groupId] : [] }
+          })()
           return (
             <div key={ev.id} className="bg-surface border border-hairline rounded-xl px-5 py-4">
               <div className="flex items-start justify-between gap-4">
@@ -360,9 +396,9 @@ export function EventsPage() {
                       Alle
                     </span>
                   )}
-                  {ev.groupId && (
+                  {eventGroupIds.length > 0 && (
                     <span className="text-[13px] text-muted">
-                      {groups.find(g => g.id === ev.groupId)?.name ?? ev.groupId}
+                      {eventGroupIds.map(id => groups.find(g => g.id === id)?.name ?? id).join(', ')}
                     </span>
                   )}
                   {ev.locationId && (
