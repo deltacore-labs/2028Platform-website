@@ -36,8 +36,8 @@ export default function App() {
         <BrowserRouter>
           <Suspense fallback={<div className="min-h-screen grid place-items-center text-gray-500">Wird geladen…</div>}>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/wallfahrt" element={<LandingPage />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/wallfahrt" element={<Navigate to="/" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/datenschutz" element={<LegalPage kind="privacy" />} />
             <Route path="/impressum" element={<LegalPage kind="imprint" />} />

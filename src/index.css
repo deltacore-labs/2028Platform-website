@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@300;400&family=Inter:wght@400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -57,6 +55,22 @@
   }
   .tracking-editorial {
     letter-spacing: 0.16px;
+  }
+
+  .legal-copy h3 {
+    margin-top: 1.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #2f2924;
+  }
+
+  .legal-copy a {
+    color: #8b4a37;
+    text-decoration: underline;
+    text-decoration-color: rgb(139 74 55 / 35%);
+    text-underline-offset: 0.18em;
   }
 
   .admin-sidebar {
