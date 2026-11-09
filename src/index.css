@@ -12,6 +12,7 @@
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     overscroll-behavior: none;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -62,6 +63,23 @@
     overscroll-behavior: contain;
   }
 
+  .landing-orb {
+    pointer-events: none;
+    filter: blur(1px);
+  }
+
+  .landing-orb-mint {
+    background: radial-gradient(circle, rgb(169 218 200 / 70%) 0%, rgb(169 218 200 / 20%) 42%, transparent 72%);
+  }
+
+  .landing-orb-peach {
+    background: radial-gradient(circle, rgb(230 177 144 / 75%) 0%, rgb(230 177 144 / 18%) 45%, transparent 72%);
+  }
+
+  .landing-orb-rose {
+    background: radial-gradient(circle, rgb(196 112 105 / 85%) 0%, rgb(196 112 105 / 18%) 48%, transparent 72%);
+  }
+
   .event-location-pin {
     display: block;
     width: 32px;
@@ -89,6 +107,10 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
     .admin-sidebar {
       transition-duration: 0ms;
     }

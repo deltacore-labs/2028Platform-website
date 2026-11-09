@@ -4,10 +4,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './context/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
-import { LandingPage } from './pages/LandingPage'
 import { useAuth } from './context/AuthContext'
 
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })))
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })))
 const EmergencyPage = lazy(() => import('./pages/EmergencyPage').then(m => ({ default: m.EmergencyPage })))
 const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage').then(m => ({ default: m.AnnouncementsPage })))
 const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })))
@@ -36,7 +36,8 @@ export default function App() {
         <BrowserRouter>
           <Suspense fallback={<div className="min-h-screen grid place-items-center text-gray-500">Wird geladen…</div>}>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/wallfahrt" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/datenschutz" element={<LegalPage kind="privacy" />} />
             <Route path="/impressum" element={<LegalPage kind="imprint" />} />
