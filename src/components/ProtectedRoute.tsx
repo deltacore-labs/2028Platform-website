@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { ForcePasswordChange } from './ForcePasswordChange'
 import type { UserRole } from '../types'
 
 interface Props {
@@ -19,6 +20,8 @@ export function ProtectedRoute({ children, requiredRole }: Props) {
   }
 
   if (!firebaseUser) return <Navigate to="/login" replace />
+
+  if (appUser?.mustChangePassword) return <ForcePasswordChange />
 
   const redirectDeniedMalteser = appUser?.role === 'malteser'
     ? <Navigate to="/admin/emergency" replace />
