@@ -4,7 +4,7 @@ import { fetchAllUsers, updateUserRole, updateUserGroup, updateUserDiocese, upda
 import { fetchGroups } from '../api/groups'
 import { fetchDioceses } from '../api/dioceses'
 import { useAuth } from '../context/AuthContext'
-import type { UserRole } from '../types'
+import type { AppUser, UserRole } from '../types'
 
 const roleLabel: Record<UserRole, string> = {
   participant: 'Teilnehmer',
@@ -87,37 +87,122 @@ export function UsersPage() {
 
   const nameMutation = useMutation({
     mutationFn: ({ uid, name }: { uid: string; name: string }) => updateUserName(uid, name),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
+    onMutate: async ({ uid, name }) => {
+      await queryClient.cancelQueries({ queryKey: ['users'] })
+      const previous = queryClient.getQueryData<AppUser[]>(['users'])
+      queryClient.setQueryData<AppUser[]>(['users'], current =>
+        current?.map(user => user.uid === uid ? { ...user, name } : user),
+      )
       setEditingNameUid(null)
+      return { previous }
     },
+    onError: (err: Error, _variables, context) => {
+      queryClient.setQueryData(['users'], context?.previous)
+      setActionError(err.message)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
   const roleMutation = useMutation({
     mutationFn: ({ uid, role }: { uid: string; role: UserRole }) => updateUserRole(uid, role),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+    onMutate: async ({ uid, role }) => {
+      await queryClient.cancelQueries({ queryKey: ['users'] })
+      const previous = queryClient.getQueryData<AppUser[]>(['users'])
+      queryClient.setQueryData<AppUser[]>(['users'], current =>
+        current?.map(user => user.uid === uid ? { ...user, role } : user),
+      )
+      return { previous }
+    },
+    onError: (err: Error, _variables, context) => {
+      queryClient.setQueryData(['users'], context?.previous)
+      setActionError(err.message)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
   const groupMutation = useMutation({
     mutationFn: ({ uid, groupId }: { uid: string; groupId: string | null }) =>
       updateUserGroup(uid, groupId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+    onMutate: async ({ uid, groupId }) => {
+      await queryClient.cancelQueries({ queryKey: ['users'] })
+      const previous = queryClient.getQueryData<AppUser[]>(['users'])
+      queryClient.setQueryData<AppUser[]>(['users'], current =>
+        current?.map(user => user.uid === uid ? { ...user, groupId } : user),
+      )
+      return { previous }
+    },
+    onError: (err: Error, _variables, context) => {
+      queryClient.setQueryData(['users'], context?.previous)
+      setActionError(err.message)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
   const dioceseMutation = useMutation({
     mutationFn: ({ uid, dioceseId }: { uid: string; dioceseId: string | null }) =>
       updateUserDiocese(uid, dioceseId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
+    onMutate: async ({ uid, dioceseId }) => {
+      await queryClient.cancelQueries({ queryKey: ['users'] })
+      const previous = queryClient.getQueryData<AppUser[]>(['users'])
+      queryClient.setQueryData<AppUser[]>(['users'], current =>
+        current?.map(user => user.uid === uid ? { ...user, dioceseId } : user),
+      )
+      return { previous }
+    },
+    onError: (err: Error, _variables, context) => {
+      queryClient.setQueryData(['users'], context?.previous)
+      setActionError(err.message)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
   const createMutation = useMutation({
     mutationFn: ({ name, email, role, matrixUsername }: { name: string; email: string; role: UserRole; matrixUsername?: string }) =>
       createUser(name, email, role, matrixUsername),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
+    onMutate: async variables => {
+      await queryClient.cancelQueries({ queryKey: ['users'] })
+      const previous = queryClient.getQueryData<AppUser[]>(['users'])
+      const optimisticUid = `optimistic-${Date.now()}`
+      const optimisticUser: AppUser = {
+        uid: optimisticUid,
+        name: variables.name,
+        role: variables.role,
+        groupId: null,
+        phone: null,
+        dioceseId: variables.role === 'admin' ? null : appUser?.dioceseId ?? null,
+        matrixUserId: null,
+        matrixUsername: variables.matrixUsername ?? null,
+        hasAccount: true,
+        fcmToken: null,
+        mustChangePassword: 1,
+        blocked: 0,
+        showInContacts: false,
+        lastSeenAt: null,
+        createdAt: '',
+        updatedAt: '',
+      }
+      queryClient.setQueryData<AppUser[]>(['users'], current => [...(current ?? []), optimisticUser])
+      setNewName('')
+      setNewEmail('')
+      setNewRole('leader')
+      setMatrixUsername('')
+      setMatrixUsernameTouched(false)
+      return { previous, optimisticUid }
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.setQueryData<AppUser[]>(['users'], current => current?.map(user =>
+        user.uid === context.optimisticUid
+          ? {
+              ...user,
+              uid: data.uid,
+              matrixUserId: data.matrix?.user_id ?? null,
+              matrixUsername: data.matrix?.username ?? user.matrixUsername,
+            }
+          : user,
+      ))
       setCreateResult({
-        name: newName,
-        email: newEmail,
+        name: variables.name,
+        email: variables.email,
         tempPassword: data.temp_password,
         matrix: data.matrix ? {
           created: data.matrix.created,
@@ -127,43 +212,82 @@ export function UsersPage() {
           error: data.matrix.error,
         } : null,
       })
-      setNewName('')
-      setNewEmail('')
-      setNewRole('leader')
-      setMatrixUsername('')
-      setMatrixUsernameTouched(false)
     },
+    onError: (err: Error, variables, context) => {
+      queryClient.setQueryData(['users'], context?.previous)
+      setNewName(variables.name)
+      setNewEmail(variables.email)
+      setNewRole(variables.role)
+      setMatrixUsername(variables.matrixUsername ?? '')
+      setMatrixUsernameTouched(!!variables.matrixUsername)
+      setActionError(err.message)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
   const deleteMutation = useMutation({
     mutationFn: (uid: string) => deleteUser(uid),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
+    onMutate: async uid => {
+      await queryClient.cancelQueries({ queryKey: ['users'] })
+      const previous = queryClient.getQueryData<AppUser[]>(['users'])
+      queryClient.setQueryData<AppUser[]>(['users'], current => current?.filter(user => user.uid !== uid))
       setConfirmDeleteUid(null)
+      return { previous }
     },
-    onError: (err: Error) => setActionError(err.message),
+    onError: (err: Error, _uid, context) => {
+      queryClient.setQueryData(['users'], context?.previous)
+      setActionError(err.message)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
   const blockMutation = useMutation({
     mutationFn: ({ uid, blocked }: { uid: string; blocked: boolean }) => setUserBlocked(uid, blocked),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
-    onError: (err: Error) => setActionError(err.message),
+    onMutate: async ({ uid, blocked }) => {
+      await queryClient.cancelQueries({ queryKey: ['users'] })
+      const previous = queryClient.getQueryData<AppUser[]>(['users'])
+      queryClient.setQueryData<AppUser[]>(['users'], current =>
+        current?.map(user => user.uid === uid ? { ...user, blocked: blocked ? 1 : 0 } : user),
+      )
+      return { previous }
+    },
+    onError: (err: Error, _variables, context) => {
+      queryClient.setQueryData(['users'], context?.previous)
+      setActionError(err.message)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
   const contactVisibilityMutation = useMutation({
     mutationFn: ({ uid, visible }: { uid: string; visible: boolean }) =>
       setUserContactVisibility(uid, visible),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
-    onError: (err: Error) => setActionError(err.message),
+    onMutate: async ({ uid, visible }) => {
+      await queryClient.cancelQueries({ queryKey: ['users'] })
+      const previous = queryClient.getQueryData<AppUser[]>(['users'])
+      queryClient.setQueryData<AppUser[]>(['users'], current =>
+        current?.map(user => user.uid === uid ? { ...user, showInContacts: visible } : user),
+      )
+      return { previous }
+    },
+    onError: (err: Error, _variables, context) => {
+      queryClient.setQueryData(['users'], context?.previous)
+      setActionError(err.message)
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }),
   })
 
   const resetPasswordMutation = useMutation({
     mutationFn: (uid: string) => resetUserPassword(uid),
-    onSuccess: (_data, uid) => {
+    onMutate: (uid) => {
       setResetSuccessUid(uid)
-      setTimeout(() => setResetSuccessUid(null), 3000)
+      setActionError(null)
+      return { previous: resetSuccessUid }
     },
-    onError: (err: Error) => setActionError(err.message),
+    onSuccess: () => setTimeout(() => setResetSuccessUid(null), 3000),
+    onError: (err: Error, _uid, context) => {
+      setResetSuccessUid(context?.previous ?? null)
+      setActionError(err.message)
+    },
   })
 
   const groupName = (id: string | null) => groups.find(g => g.id === id)?.name ?? '—'
