@@ -28,6 +28,12 @@ const roleLabel: Record<string, string> = {
   admin: 'Admin',
 }
 
+const ONLINE_THRESHOLD_S = 5 * 60
+
+function isOnline(u: AppUser): boolean {
+  return !!u.lastSeenAt && Math.floor(Date.now() / 1000) - u.lastSeenAt < ONLINE_THRESHOLD_S
+}
+
 // ─── SortableDioceseTile ────────────────────────────────────────────────────
 
 interface TileProps {
@@ -123,6 +129,11 @@ function SortableDioceseTile({
                   key={u.uid}
                   className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 bg-[#f5f0fa] border border-[#e9d5ff]"
                 >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: isOnline(u) ? '#22c55e' : '#d1d5db' }}
+                    title={isOnline(u) ? 'Online' : 'Offline'}
+                  />
                   <span className="flex-1 text-[13px] text-[#4c1d95] font-medium truncate">{u.name}</span>
                   <button
                     onClick={() => onDemoteMiniteam(u.uid)}
@@ -189,6 +200,11 @@ function SortableDioceseTile({
                 {others.map(u => (
                   <li key={u.uid} className="rounded-lg px-2.5 py-2 bg-canvas border border-hairline">
                     <div className="flex items-center gap-1.5 mb-1.5">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: isOnline(u) ? '#22c55e' : '#d1d5db' }}
+                        title={isOnline(u) ? 'Online' : 'Offline'}
+                      />
                       <span className="flex-1 text-[13px] text-ink font-medium truncate">{u.name}</span>
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-surface-strong text-muted shrink-0">
                         {roleLabel[u.role] ?? u.role}

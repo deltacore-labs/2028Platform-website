@@ -13,6 +13,7 @@ type ApiUser = {
   has_account: boolean
   blocked: number
   show_in_contacts: boolean
+  last_seen_at: number | null
 }
 
 export type CreateUserResult = {
@@ -43,6 +44,7 @@ export const fetchAllUsers = () =>
       mustChangePassword: 0,
       blocked: u.blocked ?? 0,
       showInContacts: u.show_in_contacts ?? false,
+      lastSeenAt: u.last_seen_at ?? null,
       createdAt: '',
       updatedAt: '',
     }) as AppUser)

@@ -19,6 +19,7 @@ export interface AppUser {
   mustChangePassword: number
   blocked: number
   showInContacts: boolean
+  lastSeenAt: number | null
   createdAt: string
   updatedAt: string
 }
