@@ -22,13 +22,15 @@ import type { AppUser, Diocese, Group } from '../types'
 
 const ROOT_W = 196
 const NODE_W = 176
-const PERSON_W = 184
+const PERSON_W = 220
 const NODE_H = 72
 const PERSON_H = 58
 const LEVEL_GAP = 112
 const SIBLING_GAP = 14
 const DIOCESE_GAP = 36
 const PAD = 42
+const PERSON_COLUMNS = 2
+const AUTO_EXPAND_LIMIT = 6
 
 type TreeNodeType = 'root' | 'diocese' | 'group' | 'miniteam' | 'malteser' | 'unassigned' | 'person'
 type DragItem = { type: 'group' | 'person'; id: string }
@@ -55,6 +57,8 @@ interface TreeNode {
   isLeader?: boolean
   isPrimaryLeader?: boolean
   hasAccount?: boolean
+  peopleCount?: number
+  peopleExpanded?: boolean
 }
 
 interface Branch {
@@ -103,8 +107,10 @@ const roleLabel: Record<AppUser['role'], string> = {
   admin: 'Admin',
 }
 
-function branchWidth(branch: Branch) {
-  return Math.max(NODE_W, branch.people.length * PERSON_W + Math.max(0, branch.people.length - 1) * SIBLING_GAP)
+function branchWidth(branch: Branch, expanded: boolean) {
+  if (!expanded || branch.people.length === 0) return NODE_W
+  const columns = Math.min(PERSON_COLUMNS, branch.people.length)
+  return Math.max(NODE_W, columns * PERSON_W + Math.max(0, columns - 1) * SIBLING_GAP)
 }
 
 function buildTree(
@@ -114,6 +120,7 @@ function buildTree(
   rootLabel: string,
   showEventRoot: boolean,
   showMiniteam: boolean,
+  branchExpansion: Record<string, boolean>,
 ) {
   const sortedDioceses = [...dioceses].sort((a, b) => a.sortOrder - b.sortOrder)
   const knownDioceses = new Set(dioceses.map(d => d.id))
@@ -136,6 +143,7 @@ function buildTree(
   const nodes: TreeNode[] = []
   const dioceseCenters: number[] = []
   let cursorX = PAD
+  let maxBottom = PAD + NODE_H
 
   for (const entry of entries) {
     const isOrphan = entry.diocese.id === '__unassigned__'
@@ -187,7 +195,11 @@ function buildTree(
       })
     }
 
-    const widths = branches.map(branchWidth)
+    const branchKeys = branches.map(branch => `${branch.type}:${branch.id}`)
+    const expandedBranches = branches.map((branch, index) =>
+      branchExpansion[branchKeys[index]] ?? branch.people.length <= AUTO_EXPAND_LIMIT,
+    )
+    const widths = branches.map((branch, index) => branchWidth(branch, expandedBranches[index]))
     const contentWidth = Math.max(
       NODE_W,
       widths.reduce((sum, width) => sum + width, 0) + Math.max(0, branches.length - 1) * SIBLING_GAP,
@@ -196,6 +208,7 @@ function buildTree(
     dioceseCenters.push(dioceseCenter)
     const dioceseKey = `diocese:${entry.diocese.id}`
 
+    const dioceseY = PAD + (showEventRoot ? LEVEL_GAP : 0)
     nodes.push({
       key: dioceseKey,
       type: 'diocese',
@@ -203,19 +216,22 @@ function buildTree(
       label: entry.diocese.name,
       sub: `${entry.people.length} ${entry.people.length === 1 ? 'Person' : 'Personen'}`,
       x: dioceseCenter - NODE_W / 2,
-      y: PAD + (showEventRoot ? LEVEL_GAP : 0),
+      y: dioceseY,
       width: NODE_W,
       height: NODE_H,
       parentKey: showEventRoot ? 'root' : null,
       dioceseId: isOrphan ? undefined : entry.diocese.id,
     })
+    maxBottom = Math.max(maxBottom, dioceseY + NODE_H)
 
     let branchX = cursorX
     for (let index = 0; index < branches.length; index++) {
       const branch = branches[index]
       const width = widths[index]
       const center = branchX + width / 2
-      const branchKey = `${branch.type}:${branch.id}`
+      const branchKey = branchKeys[index]
+      const peopleExpanded = expandedBranches[index]
+      const branchY = PAD + (showEventRoot ? 2 : 1) * LEVEL_GAP
       nodes.push({
         key: branchKey,
         type: branch.type,
@@ -225,17 +241,27 @@ function buildTree(
           ? `Hauptkontakt: ${branch.primaryLeaderName} · ${branch.people.length} Personen`
           : `${branch.people.length} ${branch.people.length === 1 ? 'Person' : 'Personen'}`,
         x: center - NODE_W / 2,
-        y: PAD + (showEventRoot ? 2 : 1) * LEVEL_GAP,
+        y: branchY,
         width: NODE_W,
         height: NODE_H,
         parentKey: dioceseKey,
         dioceseId: isOrphan ? undefined : branch.dioceseId,
         draggable: branch.type === 'group',
+        peopleCount: branch.people.length,
+        peopleExpanded,
       })
+      maxBottom = Math.max(maxBottom, branchY + NODE_H)
 
-      const peopleWidth = branch.people.length * PERSON_W + Math.max(0, branch.people.length - 1) * SIBLING_GAP
-      let personX = center - peopleWidth / 2
-      for (const person of branch.people) {
+      const visiblePeople = peopleExpanded ? branch.people : []
+      const columns = Math.min(PERSON_COLUMNS, visiblePeople.length)
+      const peopleWidth = columns * PERSON_W + Math.max(0, columns - 1) * SIBLING_GAP
+      const peopleX = center - peopleWidth / 2
+      const peopleY = branchY + LEVEL_GAP
+      for (let personIndex = 0; personIndex < visiblePeople.length; personIndex++) {
+        const person = visiblePeople[personIndex]
+        const column = personIndex % PERSON_COLUMNS
+        const row = Math.floor(personIndex / PERSON_COLUMNS)
+        const personY = peopleY + row * (PERSON_H + SIBLING_GAP)
         nodes.push({
           key: `person:${person.uid}`,
           type: 'person',
@@ -244,8 +270,8 @@ function buildTree(
           sub: person.uid === branch.primaryLeaderId
             ? 'Hauptansprechpartner'
             : `${roleLabel[person.role]}${person.hasAccount ? '' : ' · kein Konto'}`,
-          x: personX,
-          y: PAD + (showEventRoot ? 3 : 2) * LEVEL_GAP,
+          x: peopleX + column * (PERSON_W + SIBLING_GAP),
+          y: personY,
           width: PERSON_W,
           height: PERSON_H,
           parentKey: branchKey,
@@ -256,7 +282,7 @@ function buildTree(
           isPrimaryLeader: person.uid === branch.primaryLeaderId,
           hasAccount: person.hasAccount,
         })
-        personX += PERSON_W + SIBLING_GAP
+        maxBottom = Math.max(maxBottom, personY + PERSON_H)
       }
       branchX += width + SIBLING_GAP
     }
@@ -284,7 +310,7 @@ function buildTree(
   return {
     nodes,
     totalW: Math.max(cursorX - DIOCESE_GAP + PAD, (showEventRoot ? ROOT_W : NODE_W) + PAD * 2),
-    totalH: PAD * 2 + LEVEL_GAP * (showEventRoot ? 3 : 2) + PERSON_H,
+    totalH: maxBottom + PAD,
   }
 }
 
@@ -294,12 +320,14 @@ function DropNode({
   canEdit,
   onCreateGroup,
   onCreatePerson,
+  onTogglePeople,
 }: {
   node: TreeNode
   activeType: DragItem['type'] | null
   canEdit: boolean
   onCreateGroup?: (dioceseId: string) => void
   onCreatePerson?: (dioceseId: string) => void
+  onTogglePeople?: (nodeKey: string) => void
 }) {
   const target: DropTarget | null = node.type === 'group' && node.dioceseId
     ? { type: 'group', groupId: node.entityId, dioceseId: node.dioceseId }
@@ -324,6 +352,7 @@ function DropNode({
       isDropTarget={isOver && accepts}
       onCreateGroup={node.type === 'diocese' ? onCreateGroup : undefined}
       onCreatePerson={node.type === 'diocese' ? onCreatePerson : undefined}
+      onTogglePeople={onTogglePeople}
     />
   )
 }
@@ -337,6 +366,7 @@ function DraggableNode({
   onSetPrimaryLeader,
   onToggleLeader,
   onSelectPerson,
+  onTogglePeople,
 }: {
   node: TreeNode
   canEdit: boolean
@@ -346,6 +376,7 @@ function DraggableNode({
   onSetPrimaryLeader?: (groupId: string, leaderId: string) => void
   onToggleLeader?: (groupId: string, userId: string, assign: boolean) => void
   onSelectPerson?: (uid: string) => void
+  onTogglePeople?: (nodeKey: string) => void
 }) {
   const dragItem: DragItem = { type: node.type === 'group' ? 'group' : 'person', id: node.entityId }
   const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
@@ -377,6 +408,7 @@ function DraggableNode({
       onSetPrimaryLeader={canSetPrimaryLeader ? onSetPrimaryLeader : undefined}
       onToggleLeader={canManageLeaders ? onToggleLeader : undefined}
       onSelectPerson={onSelectPerson}
+      onTogglePeople={onTogglePeople}
     />
   )
 }
@@ -395,6 +427,7 @@ function NodeCard({
   onCreatePerson,
   onCreateDiocese,
   onSelectPerson,
+  onTogglePeople,
   overlay = false,
 }: {
   node: TreeNode
@@ -410,6 +443,7 @@ function NodeCard({
   onCreatePerson?: (dioceseId: string) => void
   onCreateDiocese?: () => void
   onSelectPerson?: (uid: string) => void
+  onTogglePeople?: (nodeKey: string) => void
   overlay?: boolean
 }) {
   const dark = node.type === 'root'
@@ -440,6 +474,7 @@ function NodeCard({
           onClick={() => onSelectPerson(node.entityId)}
           className="min-w-0 flex-1 text-left rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7c3aed]"
           aria-label={`Details zu ${node.label} anzeigen`}
+          title={node.label}
         >
           <p className="text-[12px] font-medium leading-tight truncate text-ink">{node.label}</p>
           <p className="text-[10px] mt-1 truncate text-muted">{node.sub} · Details</p>
@@ -453,6 +488,18 @@ function NodeCard({
             {node.sub}
           </p>
         </div>
+      )}
+      {node.peopleCount !== undefined && node.peopleCount > 0 && onTogglePeople && (
+        <button
+          type="button"
+          onClick={() => onTogglePeople(node.key)}
+          className="ml-1 grid h-9 w-8 shrink-0 place-items-center rounded-lg text-[16px] text-muted transition-colors hover:bg-canvas hover:text-ink"
+          aria-expanded={node.peopleExpanded}
+          aria-label={`${node.peopleExpanded ? 'Personen in' : 'Personen aus'} ${node.label} ${node.peopleExpanded ? 'ausblenden' : 'anzeigen'}`}
+          title={node.peopleExpanded ? 'Personen ausblenden' : `${node.peopleCount} Personen anzeigen`}
+        >
+          <span aria-hidden="true" className={`transition-transform ${node.peopleExpanded ? 'rotate-180' : ''}`}>⌄</span>
+        </button>
       )}
       {node.type === 'diocese' && node.dioceseId && onCreateGroup && (
         <div className="ml-1 flex shrink-0 items-center">
@@ -562,11 +609,18 @@ export function OrganizationTree({
   onSetPrimaryLeader,
   onToggleLeader,
 }: OrganizationTreeProps) {
+  const [branchExpansion, setBranchExpansion] = useState<Record<string, boolean>>({})
   const { nodes, totalW, totalH } = useMemo(
-    () => buildTree(users, groups, dioceses, rootLabel, showEventRoot, showMiniteam),
-    [users, groups, dioceses, rootLabel, showEventRoot, showMiniteam],
+    () => buildTree(users, groups, dioceses, rootLabel, showEventRoot, showMiniteam, branchExpansion),
+    [users, groups, dioceses, rootLabel, showEventRoot, showMiniteam, branchExpansion],
   )
   const nodeMap = useMemo(() => new Map(nodes.map(node => [node.key, node])), [nodes])
+  const peopleBranches = useMemo(
+    () => nodes.filter(node => node.peopleCount !== undefined && node.peopleCount > 0),
+    [nodes],
+  )
+  const visiblePeople = useMemo(() => nodes.filter(node => node.type === 'person').length, [nodes])
+  const allPeopleExpanded = peopleBranches.length > 0 && peopleBranches.every(node => node.peopleExpanded)
   const [active, setActive] = useState<DragItem | null>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -610,6 +664,20 @@ export function OrganizationTree({
     ? nodes.find(node => node.entityId === active.id && node.type === active.type)
     : undefined
 
+  function togglePeople(nodeKey: string) {
+    const node = nodeMap.get(nodeKey)
+    if (!node || node.peopleExpanded === undefined) return
+    setBranchExpansion(current => ({ ...current, [nodeKey]: !node.peopleExpanded }))
+  }
+
+  function setAllPeopleExpanded(expanded: boolean) {
+    setBranchExpansion(current => {
+      const next = { ...current }
+      for (const node of peopleBranches) next[node.key] = expanded
+      return next
+    })
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -618,6 +686,20 @@ export function OrganizationTree({
       onDragCancel={() => setActive(null)}
       onDragEnd={handleDragEnd}
     >
+      {peopleBranches.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2">
+          <p className="text-[12px] text-muted" aria-live="polite">
+            {visiblePeople} von {users.length} Personen sichtbar
+          </p>
+          <button
+            type="button"
+            onClick={() => setAllPeopleExpanded(!allPeopleExpanded)}
+            className="rounded-lg px-3 py-2 text-[12px] font-medium text-body transition-colors hover:bg-surface hover:text-ink active:bg-surface"
+          >
+            {allPeopleExpanded ? 'Alle Personen verbergen' : 'Alle Personen zeigen'}
+          </button>
+        </div>
+      )}
       <div className="overflow-x-auto overscroll-x-contain -mx-1 px-1 pb-3">
         <div className="relative" style={{ width: totalW, height: totalH, minWidth: ROOT_W + PAD * 2 }}>
           <svg className="absolute inset-0 pointer-events-none" width={totalW} height={totalH} aria-hidden="true">
@@ -647,6 +729,7 @@ export function OrganizationTree({
                   key={node.key}
                   node={node}
                   onCreateDiocese={node.type === 'root' && canCreateDioceses && !isMoving ? onCreateDiocese : undefined}
+                  onTogglePeople={togglePeople}
                 />
               )
             : node.type === 'person' || node.type === 'group'
@@ -661,6 +744,7 @@ export function OrganizationTree({
                     onSetPrimaryLeader={onSetPrimaryLeader}
                     onToggleLeader={onToggleLeader}
                     onSelectPerson={onSelectPerson}
+                    onTogglePeople={togglePeople}
                   />
                 )
               : (
@@ -671,6 +755,7 @@ export function OrganizationTree({
                     canEdit={canEdit && !isMoving}
                     onCreateGroup={canCreateGroups && !isMoving ? onCreateGroup : undefined}
                     onCreatePerson={canCreateGroups && !isMoving ? onCreatePerson : undefined}
+                    onTogglePeople={togglePeople}
                   />
                 )
           )}

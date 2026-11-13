@@ -464,6 +464,9 @@ export function OverviewPage() {
         <p className="text-[12px] text-muted-soft mb-4">
           {isLeader ? 'Bistum → eigene Gruppe → Leitung und Mitglieder' : 'Bistümer → Gruppen / Mini-Teams / Malteser → Personen'}
         </p>
+        <p className="text-[12px] text-body mb-4">
+          Große Bereiche starten kompakt. Klappe sie am Pfeil auf, um alle Namen zu sehen; Personen bleiben einzeln auswählbar und verschiebbar.
+        </p>
         {(appUser?.role === 'admin' || appUser?.role === 'miniteam') && (
           <p className="text-[12px] text-body mb-4">
             Ziehe Gruppen am Griff auf ein Bistum und Personen auf eine Gruppe, das Mini-Team oder die Malteser.
