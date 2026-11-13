@@ -62,6 +62,8 @@ function PrivacyContent() {
         <p>Für die Chatfunktion wird Matrix eingesetzt. Dabei werden Matrix-Kontodaten, Raummitgliedschaften, Nachrichten und gegebenenfalls hochgeladene Medien verarbeitet.</p>
         <h3>Apple und Google</h3>
         <p>Apple beziehungsweise Google werden einbezogen, wenn du die entsprechende Anmeldeoption, den jeweiligen App Store, Systemkarten oder Push-Infrastruktur verwendest. Es gelten ergänzend die Datenschutzhinweise des jeweiligen Anbieters.</p>
+        <h3>OpenStreetMap und Photon</h3>
+        <p>Bei der Ortssuche und Kartenanzeige können Kartendaten von OpenStreetMap und Suchergebnisse des Dienstes Photon (Komoot) geladen werden. Dabei werden technisch erforderliche Verbindungsdaten und die eingegebene Suchanfrage an den jeweiligen Anbieter übertragen. Exakte Notfallkoordinaten werden im Dashboard nicht automatisch an einen Kartendienst gesendet; erst das bewusste Öffnen eines externen Kartenlinks überträgt diese an den gewählten Anbieter.</p>
         <p>Eine Übermittlung in Drittländer kann nicht ausgeschlossen werden. Sie erfolgt nur auf Grundlage der gesetzlichen Voraussetzungen, insbesondere Angemessenheitsbeschlüssen oder geeigneten Garantien nach Art. 44 ff. DSGVO.</p>
       </LegalCard>
 

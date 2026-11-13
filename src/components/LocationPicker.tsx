@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
@@ -13,6 +13,8 @@ type PhotonFeature = {
 }
 
 const ROME_CENTER: L.LatLngExpression = [41.9028, 12.4964]
+const SEARCH_DEBOUNCE_MS = 350
+const SEARCH_TIMEOUT_MS = 8_000
 const markerIcon = L.divIcon({
   className: '',
   html: '<span class="event-location-pin" aria-hidden="true"></span>',
@@ -36,6 +38,10 @@ export function LocationPicker({ value, onChange }: {
   const markerRef = useRef<L.Marker | null>(null)
   const onChangeRef = useRef(onChange)
   const valueRef = useRef(value)
+  const searchControllerRef = useRef<AbortController | null>(null)
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchGenerationRef = useRef(0)
+  const suppressNextSearchRef = useRef(false)
   const [query, setQuery] = useState(value?.name ?? '')
   const [results, setResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -95,18 +101,24 @@ export function LocationPicker({ value, onChange }: {
     marker.setLatLng([value.lat, value.lng])
   }, [value])
 
-  async function searchLocation(event: FormEvent) {
-    event.preventDefault()
-    const term = query.trim()
-    if (term.length < 2) return
+  const runSearch = useCallback(async (term: string) => {
+    const generation = ++searchGenerationRef.current
+    searchControllerRef.current?.abort()
+    const controller = new AbortController()
+    searchControllerRef.current = controller
+    const timeout = setTimeout(() => controller.abort(), SEARCH_TIMEOUT_MS)
+
     setIsSearching(true)
     setSearchError('')
     setResults([])
     try {
       const params = new URLSearchParams({ q: term, limit: '6', lang: 'de', lat: '41.9028', lon: '12.4964' })
-      const response = await fetch(`https://photon.komoot.io/api/?${params}`)
+      const response = await fetch(`https://photon.komoot.io/api/?${params}`, {
+        signal: controller.signal,
+      })
       if (!response.ok) throw new Error('search failed')
       const data = await response.json() as { features?: PhotonFeature[] }
+      if (generation !== searchGenerationRef.current) return
       const nextResults = (data.features ?? []).flatMap<SearchResult>(feature => {
         const coordinates = feature.geometry?.coordinates
         const properties = feature.properties
@@ -121,14 +133,63 @@ export function LocationPicker({ value, onChange }: {
       setResults(nextResults)
       if (nextResults.length === 0) setSearchError('Kein passender Ort gefunden. Versuche einen genaueren Suchbegriff.')
     } catch {
+      if (generation !== searchGenerationRef.current) return
       setSearchError('Die Ortssuche ist gerade nicht erreichbar. Bitte versuche es erneut.')
     } finally {
-      setIsSearching(false)
+      clearTimeout(timeout)
+      if (generation === searchGenerationRef.current) {
+        searchControllerRef.current = null
+        setIsSearching(false)
+      }
     }
+  }, [])
+
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+
+    if (suppressNextSearchRef.current) {
+      suppressNextSearchRef.current = false
+      return
+    }
+
+    const term = query.trim()
+    if (term.length < 2 || term === value?.name) {
+      ++searchGenerationRef.current
+      searchControllerRef.current?.abort()
+      searchControllerRef.current = null
+      setIsSearching(false)
+      if (term.length < 2) {
+        setResults([])
+        setSearchError('')
+      }
+      return
+    }
+
+    searchTimerRef.current = setTimeout(() => {
+      void runSearch(term)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    }
+  }, [query, runSearch, value?.name])
+
+  useEffect(() => () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchControllerRef.current?.abort()
+  }, [])
+
+  function searchLocation(event: FormEvent) {
+    event.preventDefault()
+    const term = query.trim()
+    if (term.length < 2) return
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    void runSearch(term)
   }
 
   function selectResult(result: SearchResult) {
     const nextValue = { name: result.name, lat: result.lat, lng: result.lng }
+    suppressNextSearchRef.current = true
     setQuery(result.name)
     setResults([])
     onChange(nextValue)
@@ -136,6 +197,9 @@ export function LocationPicker({ value, onChange }: {
   }
 
   function clearLocation() {
+    ++searchGenerationRef.current
+    searchControllerRef.current?.abort()
+    searchControllerRef.current = null
     setQuery('')
     setResults([])
     markerRef.current?.remove()
