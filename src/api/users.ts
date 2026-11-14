@@ -115,3 +115,7 @@ export const setUserContactVisibility = (uid: string, visible: boolean) =>
 
 export const resetUserPassword = (uid: string) =>
   apiClient.post(`/v1/users/${uid}/reset-password`).then(r => r.data)
+
+export const synchronizeOwnMatrixPassword = (password: string) =>
+  apiClient.post<{ matrixUsername: string | null }>('/v1/users/me/matrix-password', { password })
+    .then(r => r.data.matrixUsername)

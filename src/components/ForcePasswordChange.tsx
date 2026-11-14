@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { updatePassword } from 'firebase/auth'
+import { getIdToken, updatePassword } from 'firebase/auth'
 import { auth } from '../lib/firebase'
 import { apiClient } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { synchronizeOwnMatrixPassword } from '../api/users'
 
 export function ForcePasswordChange() {
   const { refreshUser } = useAuth()
@@ -26,15 +27,26 @@ export function ForcePasswordChange() {
     }
     setLoading(true)
     setError(null)
+    let firebasePasswordChanged = false
     try {
       const user = auth.currentUser
       if (!user) throw new Error('Nicht angemeldet')
       await updatePassword(user, newPassword)
+      firebasePasswordChanged = true
+      // Force a fresh ID token after Firebase changed the credential. The
+      // worker uses the recent auth time and verifies the Firebase password
+      // timestamp before it clears the mandatory-change flag.
+      await getIdToken(user, true)
       await apiClient.post('/v1/users/me/password-changed')
+      // Admin and Miniteam accounts use the same credential for Matrix. For
+      // all other roles the endpoint is an intentional no-op.
+      await synchronizeOwnMatrixPassword(newPassword)
       await refreshUser()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Fehler beim Ändern des Passworts'
-      setError(msg)
+      setError(firebasePasswordChanged
+        ? `Das App-Passwort wurde geändert, aber die Kontosynchronisierung ist fehlgeschlagen. Bitte klicke erneut auf „Passwort speichern“. (${msg})`
+        : msg)
     } finally {
       setLoading(false)
     }
