@@ -241,7 +241,7 @@ export function AnnouncementsPage() {
                       {priorityLabel[a.priority]}
                     </span>
                     <span className="text-muted text-[13px]">
-                      {new Date(a.createdAt).toLocaleString('de-DE')}
+                      {new Date(a.createdAt * 1_000).toLocaleString('de-DE')}
                     </span>
                     {isArchived && (
                       <span className="text-[11px] text-gray-400 border border-gray-300 rounded px-1.5 py-0.5 font-medium">

@@ -5,7 +5,9 @@ export const fetchAnnouncements = (includeArchived = false) => {
   const url = includeArchived
     ? '/v1/announcements?include_archived=true'
     : '/v1/announcements'
-  return apiClient.get<Announcement[]>(url).then(r => r.data)
+  return apiClient
+    .get<Announcement[]>(url)
+    .then(r => [...r.data].sort((a, b) => b.createdAt - a.createdAt))
 }
 
 export const createAnnouncement = (payload: {

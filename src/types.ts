@@ -59,9 +59,9 @@ export interface Announcement {
   targetGroupIds: string[]
   targetRoles: UserRole[]
   createdBy: string
-  createdAt: string
+  createdAt: number
   isRead: boolean
-  archivedAt: string | null
+  archivedAt: number | null
 }
 
 export interface EmergencyReport {
