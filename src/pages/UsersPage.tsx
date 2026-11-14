@@ -438,7 +438,7 @@ export function UsersPage() {
                       onChange={e => { setMatrixUsername(e.target.value.toLowerCase()); setMatrixUsernameTouched(true) }}
                       className={`w-full rounded-l-none ${inputClass}`}
                       placeholder="vorname.nachname"
-                      pattern="[a-z0-9._=-]{3,64}"
+                      pattern="[-a-z0-9._=]{3,64}"
                     />
                     <span className="hidden sm:block px-3 py-2.5 border border-l-0 border-hairline-strong rounded-r-lg bg-canvas text-muted text-[14px]">:matrix.deltacorelabs.de</span>
                   </div>
@@ -456,7 +456,7 @@ export function UsersPage() {
               role: newRole,
               matrixUsername: newRole === 'miniteam' ? matrixUsername : undefined,
             })}
-            disabled={newName.trim().length < 2 || !newEmail.includes('@') || (newRole === 'miniteam' && !/^[a-z0-9._=-]{3,64}$/.test(matrixUsername)) || createMutation.isPending}
+            disabled={newName.trim().length < 2 || !newEmail.includes('@') || (newRole === 'miniteam' && !/^[-a-z0-9._=]{3,64}$/.test(matrixUsername)) || createMutation.isPending}
             className="bg-ink-warm hover:bg-ink disabled:opacity-40 text-white text-[15px] font-medium px-5 py-2.5 rounded-pill transition-colors"
           >
             {createMutation.isPending ? 'Anlegen…' : 'Anlegen'}

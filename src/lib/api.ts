@@ -13,3 +13,11 @@ apiClient.interceptors.request.use(async (config) => {
   }
   return config
 })
+
+apiClient.interceptors.response.use(
+  response => response,
+  error => {
+    const msg = error.response?.data?.error ?? error.message
+    return Promise.reject(new Error(msg))
+  },
+)
