@@ -36,7 +36,7 @@ const roleLabels: Record<string, string> = {
   miniteam: 'Mini-Team',
   leader: 'Gruppenleitung',
   malteser: 'Malteser',
-  participant: 'Teilnehmer',
+  participant: 'Teilnehmer/in',
   guest: 'Gast',
 }
 

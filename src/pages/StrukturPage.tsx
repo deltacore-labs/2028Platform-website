@@ -22,8 +22,8 @@ import { fetchAllUsers, updateUserDiocese, updateUserRole, updateUserGroup } fro
 import type { Diocese, Group, AppUser } from '../types'
 
 const roleLabel: Record<string, string> = {
-  participant: 'Teilnehmer',
-  leader: 'Leiter',
+  participant: 'Teilnehmer/in',
+  leader: 'Leiter/in',
   miniteam: 'Miniteam',
   admin: 'Admin',
 }
@@ -138,7 +138,7 @@ function SortableDioceseTile({
                   <button
                     onClick={() => onDemoteMiniteam(u.uid)}
                     className="text-[11px] text-[#7c3aed] hover:text-[#dc2626] transition-colors shrink-0 px-1"
-                    title="Miniteam-Status entfernen (→ Leiter)"
+                    title="Miniteam-Status entfernen (→ Leitung)"
                   >
                     ×
                   </button>
@@ -161,7 +161,7 @@ function SortableDioceseTile({
                 <li key={g.id} className="rounded-lg px-2.5 py-2 bg-canvas border border-hairline">
                   <p className="text-[13px] text-ink font-medium truncate mb-1.5">{g.name}</p>
                   {g.leaderName && (
-                    <p className="text-[11px] text-muted mb-1.5 truncate">Leiter: {g.leaderName}</p>
+                    <p className="text-[11px] text-muted mb-1.5 truncate">Leitung: {g.leaderName}</p>
                   )}
                   <select
                     value={diocese.id}

@@ -28,7 +28,7 @@ const navSections = [
   {
     label: 'Organisation',
     items: [
-      { to: '/admin/users', label: 'Nutzer', icon: 'users', roles: ['miniteam', 'admin'] },
+      { to: '/admin/users', label: 'Nutzende', icon: 'users', roles: ['miniteam', 'admin'] },
       { to: '/admin/groups', label: 'Gruppen', icon: 'groups', roles: ['miniteam', 'admin'] },
     ],
   },
@@ -41,7 +41,7 @@ const navSections = [
 ] as const
 
 const roleLabels = {
-  participant: 'Teilnehmer',
+  participant: 'Teilnehmer/in',
   leader: 'Gruppenleitung',
   miniteam: 'Miniteam',
   malteser: 'Malteser',

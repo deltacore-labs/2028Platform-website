@@ -7,8 +7,8 @@ import { useAuth } from '../context/AuthContext'
 import type { AppUser, UserRole } from '../types'
 
 const roleLabel: Record<UserRole, string> = {
-  participant: 'Teilnehmer',
-  leader: 'Leiter',
+  participant: 'Teilnehmer/in',
+  leader: 'Leiter/in',
   miniteam: 'Miniteam',
   malteser: 'Malteser',
   admin: 'Admin',
@@ -329,7 +329,7 @@ export function UsersPage() {
           Nutzerverwaltung
         </h2>
         <p className="text-muted text-[13px] mt-0.5 tracking-[0.16px]">
-          {hasActiveFilter ? `${filtered.length} von ${users.length} Nutzern` : `${users.length} Nutzer`}
+          {hasActiveFilter ? `${filtered.length} von ${users.length} Nutzenden` : `${users.length} Nutzende`}
         </p>
       </div>
 
@@ -416,8 +416,8 @@ export function UsersPage() {
               }}
               className={`bg-surface ${inputClass}`}
             >
-              <option value="leader">Leiter</option>
-              <option value="participant">Teilnehmer</option>
+              <option value="leader">Leiter/in</option>
+              <option value="participant">Teilnehmer/in</option>
               <option value="miniteam">Miniteam</option>
               <option value="malteser">Malteser</option>
               {isAdmin && <option value="admin">Admin</option>}
@@ -479,8 +479,8 @@ export function UsersPage() {
           className={`bg-surface ${inputClass}`}
         >
           <option value="">Alle Rollen</option>
-          <option value="participant">Teilnehmer</option>
-          <option value="leader">Leiter</option>
+          <option value="participant">Teilnehmer/in</option>
+          <option value="leader">Leiter/in</option>
           <option value="miniteam">Miniteam</option>
           <option value="malteser">Malteser</option>
           <option value="admin">Admin</option>
@@ -607,8 +607,8 @@ export function UsersPage() {
                         onBlur={() => setEditingRoleUid(null)}
                         className="bg-canvas text-ink rounded-lg px-2.5 py-1.5 border border-hairline-strong text-[13px] focus:outline-none focus:border-ink transition-colors"
                       >
-                        <option value="participant">Teilnehmer</option>
-                        <option value="leader">Leiter</option>
+                        <option value="participant">Teilnehmer/in</option>
+                        <option value="leader">Leiter/in</option>
                         <option value="miniteam">Miniteam</option>
                         <option value="malteser">Malteser</option>
                         {isAdmin && <option value="admin">Admin</option>}
@@ -790,7 +790,7 @@ export function UsersPage() {
                         onClick={() => setConfirmDeleteUid(u.uid)}
                         disabled={appUser?.uid === u.uid}
                         className="text-[12px] text-muted hover:text-red-600 disabled:opacity-40 px-2 py-1 rounded hover:bg-red-50 transition-colors border border-transparent hover:border-red-100"
-                        title="Nutzer löschen"
+                        title="Nutzende/n löschen"
                       >
                         🗑
                       </button>
@@ -802,7 +802,7 @@ export function UsersPage() {
             {filtered.length === 0 && !isLoading && (
               <tr>
                 <td colSpan={isAdmin ? 6 : 5} className="px-5 py-6 text-muted text-[14px] text-center">
-                  Keine Nutzer gefunden.
+                  Keine Nutzenden gefunden.
                 </td>
               </tr>
             )}

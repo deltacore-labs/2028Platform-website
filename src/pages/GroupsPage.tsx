@@ -185,7 +185,7 @@ export function GroupsPage() {
         <div className="mb-4">
           <input
             type="text"
-            placeholder="Gruppe oder Leiter suchen…"
+            placeholder="Gruppe oder Leitung suchen…"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full bg-surface text-ink rounded-lg px-4 py-2.5 border border-hairline-strong text-[14px] focus:outline-none focus:border-ink transition-colors placeholder:text-muted-soft"
@@ -338,7 +338,7 @@ export function GroupsPage() {
                             <span className="text-body text-[15px]">{m.name}</span>
                             {m.role === 'leader' && (
                               <span className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${g.primaryLeaderId === m.uid ? 'bg-[#fef3c7] text-[#92400e]' : 'bg-[#dcfce7] text-[#166534]'}`}>
-                                {g.primaryLeaderId === m.uid ? '★ Hauptansprechpartner' : 'Leiter'}
+                                {g.primaryLeaderId === m.uid ? '★ Hauptkontakt' : 'Leiter/in'}
                               </span>
                             )}
                             {m.phone && (
@@ -368,7 +368,7 @@ export function GroupsPage() {
                                 disabled={leaderRoleMutation.isPending || primaryLeaderMutation.isPending}
                                 className="rounded-pill border border-hairline-strong bg-surface px-3 py-1 text-[12px] font-medium text-body hover:bg-canvas-deep disabled:opacity-50"
                               >
-                                {m.role === 'leader' ? 'Leitung entfernen' : 'Zum Leiter machen'}
+                                {m.role === 'leader' ? 'Leitung entfernen' : 'Leiterrolle zuweisen'}
                               </button>
                             )}
                           </div>

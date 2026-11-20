@@ -100,8 +100,8 @@ interface OrganizationTreeProps {
 }
 
 const roleLabel: Record<AppUser['role'], string> = {
-  participant: 'Teilnehmer',
-  leader: 'Leiter',
+  participant: 'Teilnehmer/in',
+  leader: 'Leiter/in',
   miniteam: 'Mini-Team',
   malteser: 'Malteser',
   admin: 'Admin',
@@ -268,7 +268,7 @@ function buildTree(
           entityId: person.uid,
           label: person.name,
           sub: person.uid === branch.primaryLeaderId
-            ? 'Hauptansprechpartner'
+            ? 'Hauptkontakt'
             : `${roleLabel[person.role]}${person.hasAccount ? '' : ' · kein Konto'}`,
           x: peopleX + column * (PERSON_W + SIBLING_GAP),
           y: personY,
@@ -545,8 +545,8 @@ function NodeCard({
               ? 'bg-[#f0faf4] text-[#15803d] hover:bg-red-50 hover:text-[#dc2626]'
               : 'text-muted-soft hover:bg-[#f0faf4] hover:text-[#15803d]'
           }`}
-          aria-label={node.isLeader ? `${node.label} die Leiterrolle entziehen` : `${node.label} zum Leiter machen`}
-          title={node.isLeader ? 'Leiterrolle entfernen' : 'Zum Leiter machen'}
+          aria-label={node.isLeader ? `${node.label} die Leiterrolle entziehen` : `${node.label} zur Leitung machen`}
+          title={node.isLeader ? 'Leiterrolle entfernen' : 'Zur Leitung machen'}
         >
           {node.isLeader ? 'L−' : 'L+'}
         </button>
@@ -558,8 +558,8 @@ function NodeCard({
           className={`ml-1 grid h-9 w-8 shrink-0 place-items-center rounded-lg text-[17px] transition-colors ${
             node.isPrimaryLeader ? 'text-amber-500' : 'text-muted-soft hover:bg-amber-50 hover:text-amber-500'
           }`}
-          aria-label={`${node.label} als Hauptansprechpartner festlegen`}
-          title={node.isPrimaryLeader ? 'Hauptansprechpartner' : 'Als Hauptansprechpartner festlegen'}
+          aria-label={`${node.label} als Hauptkontakt festlegen`}
+          title={node.isPrimaryLeader ? 'Hauptkontakt' : 'Als Hauptkontakt festlegen'}
         >
           {node.isPrimaryLeader ? '★' : '☆'}
         </button>

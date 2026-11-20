@@ -9,8 +9,8 @@ import { OrganizationTree, type OrganizationMove } from '../components/Organizat
 import type { AppUser, Group } from '../types'
 
 const roleName: Record<AppUser['role'], string> = {
-  participant: 'Teilnehmer',
-  leader: 'Leiter',
+  participant: 'Teilnehmer/in',
+  leader: 'Leiter/in',
   miniteam: 'Mini-Team',
   malteser: 'Malteser',
   admin: 'Admin',
@@ -237,11 +237,11 @@ export function OverviewPage() {
     },
     onSuccess: async (_, _variables, context) => {
       await queryClient.invalidateQueries({ queryKey: ['groups'] })
-      setMoveMessage(`${context?.leaderName ?? 'Die Person'} ist jetzt Hauptansprechpartner der Gruppe.`)
+      setMoveMessage(`${context?.leaderName ?? 'Die Person'} ist jetzt Hauptkontakt der Gruppe.`)
     },
     onError: (error, _variables, context) => {
       if (context?.previousGroups) queryClient.setQueryData(['groups'], context.previousGroups)
-      setMoveMessage(error instanceof Error ? error.message : 'Hauptansprechpartner konnte nicht gespeichert werden.')
+      setMoveMessage(error instanceof Error ? error.message : 'Hauptkontakt konnte nicht gespeichert werden.')
     },
   })
 
@@ -285,8 +285,8 @@ export function OverviewPage() {
         queryClient.invalidateQueries({ queryKey: ['groups'] }),
       ])
       setMoveMessage(variables.assign
-        ? `${context?.personName ?? 'Die Person'} ist jetzt Leiter der Gruppe und hat Zugriff auf alle Gruppenfunktionen.`
-        : `${context?.personName ?? 'Die Person'} ist jetzt wieder Teilnehmer.`)
+        ? `${context?.personName ?? 'Die Person'} hat jetzt die Leitungsrolle in der Gruppe.`
+        : `${context?.personName ?? 'Die Person'} ist jetzt wieder Teilnehmer/in.`)
     },
     onError: (error, _variables, context) => {
       if (context?.previousUsers) queryClient.setQueryData(['users'], context.previousUsers)
@@ -330,29 +330,29 @@ export function OverviewPage() {
 
   const kpis = isLeader ? [
     { label: 'Personen', value: totalUsers },
-    { label: 'Teilnehmer', value: participants },
-    { label: 'Leiter', value: leaders },
+    { label: 'Teilnehmende', value: participants },
+    { label: 'Leitende', value: leaders },
     { label: 'Ohne Telefon', value: withoutPhone, warn: withoutPhone > 0 },
   ] : isMiniteam ? [
     { label: 'Personen', value: totalUsers },
     { label: 'Gruppen', value: totalGroups },
     { label: 'Aktive Notfälle', value: activeEmergencies, warn: activeEmergencies > 0 },
-    { label: 'Leiter', value: leaders },
+    { label: 'Leitende', value: leaders },
     { label: 'Mini-Team', value: miniteams },
   ] : [
     { label: 'Personen', value: totalUsers },
     { label: 'Gruppen', value: totalGroups },
     { label: 'Bistümer', value: totalDioceses },
     { label: 'Aktive Notfälle', value: activeEmergencies, warn: activeEmergencies > 0 },
-    { label: 'Leiter', value: leaders },
+    { label: 'Leitende', value: leaders },
   ]
 
   const roles = isLeader ? [
-    { label: 'Teilnehmer', count: participants, bar: 'bg-hairline-strong' },
-    { label: 'Leiter', count: leaders, bar: 'bg-[#86efac]' },
+    { label: 'Teilnehmende', count: participants, bar: 'bg-hairline-strong' },
+    { label: 'Leitende', count: leaders, bar: 'bg-[#86efac]' },
   ] : [
-    { label: 'Teilnehmer', count: participants, bar: 'bg-hairline-strong' },
-    { label: 'Leiter', count: leaders, bar: 'bg-[#86efac]' },
+    { label: 'Teilnehmende', count: participants, bar: 'bg-hairline-strong' },
+    { label: 'Leitende', count: leaders, bar: 'bg-[#86efac]' },
     { label: 'Miniteam', count: miniteams, bar: 'bg-[#c4b5fd]' },
     { label: 'Malteser', count: malteser, bar: 'bg-red-300' },
     { label: 'Admin', count: admins, bar: 'bg-canvas-deep' },
@@ -470,7 +470,7 @@ export function OverviewPage() {
         {(appUser?.role === 'admin' || appUser?.role === 'miniteam') && (
           <p className="text-[12px] text-body mb-4">
             Ziehe Gruppen am Griff auf ein Bistum und Personen auf eine Gruppe, das Mini-Team oder die Malteser.
-            Mit L+ weist du die Leiterrolle zu; der Stern markiert den Hauptansprechpartner.
+            Mit L+ weist du die Leiterrolle zu; der Stern markiert den Hauptkontakt.
             Mit P+ legst du Personen ohne Konto an, mit G+ Gruppen und als Admin an der Wurzel weitere Bistümer.
           </p>
         )}
@@ -556,7 +556,7 @@ export function OverviewPage() {
                 <th className="text-left px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted">Bistum</th>
                 <th className="text-right px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted">Personen</th>
                 <th className="text-right px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted">Gruppen</th>
-                <th className="text-right px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted hidden md:table-cell">Leiter</th>
+                <th className="text-right px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted hidden md:table-cell">Leitung</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
@@ -590,7 +590,7 @@ export function OverviewPage() {
             <thead>
               <tr className="border-b border-hairline">
                 <th className="text-left px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted">Gruppe</th>
-                <th className="text-left px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted hidden md:table-cell">Hauptansprechpartner</th>
+                <th className="text-left px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted hidden md:table-cell">Hauptkontakt</th>
                 <th className="text-left px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted hidden md:table-cell">Bistum</th>
                 <th className="text-right px-5 py-2.5 text-[11px] font-semibold tracking-[0.6px] uppercase text-muted">Mitglieder</th>
               </tr>
@@ -604,7 +604,7 @@ export function OverviewPage() {
                   <tr key={g.id} className="hover:bg-canvas transition-colors">
                     <td className="px-5 py-3 font-medium text-ink">{g.name}</td>
                     <td className="px-5 py-3 text-body hidden md:table-cell">
-                      {g.leaderName ?? <span className="text-muted-soft italic">Kein Leiter</span>}
+                      {g.leaderName ?? <span className="text-muted-soft italic">Keine Leitung</span>}
                     </td>
                     <td className="px-5 py-3 text-body hidden md:table-cell">
                       {diocese?.name ?? <span className="text-muted-soft">—</span>}

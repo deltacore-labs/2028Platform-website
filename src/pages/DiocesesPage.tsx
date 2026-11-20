@@ -177,7 +177,7 @@ export function DiocesesPage() {
                 ) : confirmDeleteId === d.id ? (
                   <div className="flex items-center gap-3">
                     <p className="text-ink text-[14px] flex-1">
-                      <span className="font-medium">{d.name}</span> wirklich löschen? Alle zugehörigen Nutzer verlieren die Bistumszuordnung.
+                      <span className="font-medium">{d.name}</span> wirklich löschen? Alle zugehörigen Nutzenden verlieren die Bistumszuordnung.
                     </p>
                     <button
                       onClick={() => deleteMutation.mutate(d.id)}
@@ -200,7 +200,7 @@ export function DiocesesPage() {
                       <span className="text-muted text-[13px] font-mono shrink-0">{d.id}</span>
                       {isAdmin && userCountByDiocese[d.id] !== undefined && (
                         <span className="text-[12px] text-muted bg-canvas px-2 py-0.5 rounded-pill shrink-0">
-                          {userCountByDiocese[d.id]} {userCountByDiocese[d.id] === 1 ? 'Nutzer' : 'Nutzer'}
+                          {userCountByDiocese[d.id]} Nutzende
                         </span>
                       )}
                     </div>

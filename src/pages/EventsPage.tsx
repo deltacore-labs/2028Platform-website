@@ -8,8 +8,8 @@ import { useAuth } from '../context/AuthContext'
 import type { UserRole } from '../types'
 
 const ROLE_LABELS: Record<string, string> = {
-  participant: 'Teilnehmer',
-  leader: 'Leiter',
+  participant: 'Teilnehmer/in',
+  leader: 'Leiter/in',
   miniteam: 'Miniteam',
 }
 
