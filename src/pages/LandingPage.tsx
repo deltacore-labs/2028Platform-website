@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import '../../../docs/style.css'
-import appIcon from '../../../docs/favicon-192.png'
-import homeLight from '../../../docs/Home_White.webp'
-import homeDark from '../../../docs/Home_Dark.webp'
-import mapDark from '../../../docs/Karte_Dark.webp'
-import toolsLight from '../../../docs/Mehr_White.webp'
-import sosDark from '../../../docs/SOS_Dark.webp'
-import appStoreBadge from '../../../docs/Download_on_the_App_Store_Badge_DE_RGB_wht_092917.svg'
-import googlePlayBadge from '../../../docs/lockup_Google_Play_CMYK_color_horizontal_688x140px.png'
+import '../assets/landing/style.css'
+import appIcon from '../assets/landing/favicon-192.png'
+import homeLight from '../assets/landing/Home_White.webp'
+import homeDark from '../assets/landing/Home_Dark.webp'
+import mapDark from '../assets/landing/Karte_Dark.webp'
+import toolsLight from '../assets/landing/Mehr_White.webp'
+import sosDark from '../assets/landing/SOS_Dark.webp'
+import appStoreBadge from '../assets/landing/Download_on_the_App_Store_Badge_DE_RGB_wht_092917.svg'
+import googlePlayBadge from '../assets/landing/lockup_Google_Play_CMYK_color_horizontal_688x140px.png'
 
 const formattedDate = new Intl.DateTimeFormat('de-DE', {
   weekday: 'long',

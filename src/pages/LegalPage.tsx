@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import appIcon from '../../../docs/favicon-192.png'
+import appIcon from '../assets/landing/favicon-192.png'
 
 type LegalPageProps = { kind: 'privacy' | 'imprint' }
 
